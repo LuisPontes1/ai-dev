@@ -55,7 +55,7 @@
 | `--effort high` | For complex reasoning tasks |
 | `--model codex` | When Codex is preferred for the task |
 
-**Setup:** See `docs/copilot-setup.md`
+**Setup:** See `docs/copilot-plugin.md`
 
 ---
 
