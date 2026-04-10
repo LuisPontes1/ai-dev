@@ -20,7 +20,7 @@ Based on what you find, identify the project type:
 
 ## Step 2 — Create .ai-dev/ structure
 
-Create the following files. For `context.md`, use the matching starter template if the project type is known (starters are at `~/.claude/commands/../templates/starters/`). For `generic`, use the base template.
+Create the following files. For `context.md`, use the matching starter template if the project type is known. Starters are at `~/.claude/ai-dev/templates/starters/` (installed by `install.sh`). For `generic`, use `~/.claude/ai-dev/templates/context.md`.
 
 **`.ai-dev/context.md`**
 Use the starter for the detected project type. Fill in what you can infer from the project files. Mark everything uncertain with `[TODO]`.
@@ -29,16 +29,16 @@ Use the starter for the detected project type. Fill in what you can infer from t
 `Status: draft`. Empty task table. Changelog with one entry: "Plano criado".
 
 **`.ai-dev/tasks/_template.md`**
-Copy the standard task template (includes atomicity checklist, type field, rollback section).
+Copy from `~/.claude/ai-dev/templates/tasks/_template.md`.
 
 **`.ai-dev/agents/assignments.md`**
-Empty table with headers only.
+Copy from `~/.claude/ai-dev/templates/agents/assignments.md` (clear the example row, keep headers).
 
 **`.ai-dev/agents/roles.md`**
-Copy the standard roles definition.
+Copy from `~/.claude/ai-dev/templates/agents/roles.md`.
 
 **`.ai-dev/dependencies/graph.md`**
-Empty graph with headers only.
+Copy from `~/.claude/ai-dev/templates/dependencies/graph.md` (clear the example DAG, keep headers).
 
 **`.ai-dev/discovery/.gitkeep`**
 Empty file — preserves directory for discovery and deployment task outputs.

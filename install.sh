@@ -14,6 +14,14 @@ MARKER_START="<!-- ai-dev:start -->"
 MARKER_END="<!-- ai-dev:end -->"
 DRY_RUN=false
 
+# Detect python binary (needed for safe block replace in CLAUDE.md)
+PYTHON_BIN=""
+if command -v python3 &>/dev/null; then
+  PYTHON_BIN="python3"
+elif command -v python &>/dev/null && python -c "import sys; sys.exit(0 if sys.version_info.major==3 else 1)" &>/dev/null; then
+  PYTHON_BIN="python"
+fi
+
 # ── Colors ──────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
 info()    { echo -e "${BLUE}[ai-dev]${NC} $*"; }
@@ -44,7 +52,8 @@ install_global_claude() {
   elif grep -qF "$MARKER_START" "$GLOBAL_CLAUDE"; then
     # Block markers exist — replace only the ai-dev section, preserve everything else
     cp "$GLOBAL_CLAUDE" "$GLOBAL_CLAUDE.bak"
-    python3 - "$GLOBAL_CLAUDE" "$src" "$MARKER_START" "$MARKER_END" <<'EOF'
+    if [[ -n "$PYTHON_BIN" ]]; then
+      $PYTHON_BIN - "$GLOBAL_CLAUDE" "$src" "$MARKER_START" "$MARKER_END" <<'EOF'
 import re, sys
 target, src, start, end = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
 content = open(target).read()
@@ -54,7 +63,15 @@ replacement = f"{start}\n{new_block}\n{end}"
 result = re.sub(pattern, replacement, content, flags=re.DOTALL)
 open(target, 'w').write(result)
 EOF
-    success "Updated ai-dev block in ~/CLAUDE.md (backup: ~/CLAUDE.md.bak)"
+      success "Updated ai-dev block in ~/CLAUDE.md (backup: ~/CLAUDE.md.bak)"
+    else
+      warn "python3/python not found — cannot do safe block replace."
+      warn "Falling back to append. Remove the old ai-dev block manually if needed."
+      printf '\n\n%s\n' "$MARKER_START" >> "$GLOBAL_CLAUDE"
+      cat "$src" >> "$GLOBAL_CLAUDE"
+      printf '\n%s\n' "$MARKER_END" >> "$GLOBAL_CLAUDE"
+      warn "Appended new ai-dev block (backup: ~/CLAUDE.md.bak)"
+    fi
 
   else
     # File exists with other content, no markers — append block safely
@@ -104,7 +121,23 @@ install_commands() {
   fi
 }
 
-# ── 4. Check Copilot plugin ──────────────────────────────────────────────────
+# ── 4. Templates → ~/.claude/ai-dev/templates/ ──────────────────────────────
+install_templates() {
+  local src_dir="$SCRIPT_DIR/templates"
+  local dest_dir="$CLAUDE_AIDEV_DIR/templates"
+  [[ ! -d "$src_dir" ]] && { warn "No templates/ directory — skipping"; return; }
+
+  info "Installing templates to $dest_dir"
+  if ! $DRY_RUN; then
+    mkdir -p "$dest_dir"
+    cp -r "$src_dir"/. "$dest_dir/"
+    success "  Installed templates (starters, tasks, agents, dependencies, reports)"
+  else
+    warn "  Would install: ~/.claude/ai-dev/templates/"
+  fi
+}
+
+# ── 5. Check Copilot plugin ──────────────────────────────────────────────────
 check_copilot_plugin() {
   echo ""
   if [[ -d "$COPILOT_PLUGIN_DIR" ]]; then
@@ -129,9 +162,10 @@ print_summary() {
   echo -e "${GREEN}  AI-Dev installed${NC}"
   echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   echo ""
-  echo "  ~/CLAUDE.md            — global PM instructions (core)"
-  echo "  ~/.claude/ai-dev/      — on-demand protocol files"
-  echo "  ~/.claude/commands/    — slash commands (/ai-dev-init)"
+  echo "  ~/CLAUDE.md                    — global PM instructions (core)"
+  echo "  ~/.claude/ai-dev/              — on-demand protocol files + templates"
+  echo "  ~/.claude/ai-dev/templates/    — starters, task/agent/report templates"
+  echo "  ~/.claude/commands/            — slash commands (/ai-dev-init)"
   echo ""
   echo "  Next steps:"
   echo "    1. Open any repo in VS Code with Claude Code"
@@ -146,6 +180,7 @@ print_summary() {
 # ── Run ──────────────────────────────────────────────────────────────────────
 install_global_claude
 install_protocol_files
+install_templates
 install_commands
 check_copilot_plugin
 print_summary
