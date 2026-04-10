@@ -121,7 +121,23 @@ install_commands() {
   fi
 }
 
-# ── 4. Templates → ~/.claude/ai-dev/templates/ ──────────────────────────────
+# ── 4. Enable flag (on by default) ──────────────────────────────────────────
+install_enable_flag() {
+  local flag="$CLAUDE_AIDEV_DIR/enabled"
+  if ! $DRY_RUN; then
+    mkdir -p "$CLAUDE_AIDEV_DIR"
+    if [[ ! -f "$flag" ]]; then
+      touch "$flag"
+      success "AI-Dev enabled (flag: ~/.claude/ai-dev/enabled)"
+    else
+      info "AI-Dev already enabled"
+    fi
+  else
+    warn "Would create: ~/.claude/ai-dev/enabled"
+  fi
+}
+
+# ── 5. Templates → ~/.claude/ai-dev/templates/ ──────────────────────────────
 install_templates() {
   local src_dir="$SCRIPT_DIR/templates"
   local dest_dir="$CLAUDE_AIDEV_DIR/templates"
@@ -163,9 +179,10 @@ print_summary() {
   echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   echo ""
   echo "  ~/CLAUDE.md                    — global PM instructions (core)"
+  echo "  ~/.claude/ai-dev/enabled       — toggle flag (ai-dev is ON)"
   echo "  ~/.claude/ai-dev/              — on-demand protocol files + templates"
   echo "  ~/.claude/ai-dev/templates/    — starters, task/agent/report templates"
-  echo "  ~/.claude/commands/            — slash commands (/ai-dev-init)"
+  echo "  ~/.claude/commands/            — slash commands (/ai-dev-init, /ai-dev-on, /ai-dev-off)"
   echo ""
   echo "  Next steps:"
   echo "    1. Open any repo in VS Code with Claude Code"
@@ -180,6 +197,7 @@ print_summary() {
 # ── Run ──────────────────────────────────────────────────────────────────────
 install_global_claude
 install_protocol_files
+install_enable_flag
 install_templates
 install_commands
 check_copilot_plugin

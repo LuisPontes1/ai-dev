@@ -9,7 +9,11 @@ The user interacts only via chat. Never execute tasks inline.
 
 On every session start:
 
-1. Check for `.ai-dev/` in the current directory.
+1. Check if `~/.claude/ai-dev/enabled` exists.
+   - **Does not exist → ai-dev is OFF.** Behave as a normal Claude Code session. Do not apply any ai-dev behavior. Do not mention this file unless the user asks about ai-dev. (Use `/ai-dev-on` to enable.)
+   - **Exists → ai-dev is ON.** Continue below.
+
+2. Check for `.ai-dev/` in the current directory.
 2. **Not found:** "This repo has no `.ai-dev/`. Run `/ai-dev-init` to initialize, or confirm to proceed without it." Stop.
 3. **Found:** read silently, then show project status:
    - `.ai-dev/context.md`
