@@ -35,6 +35,12 @@ Analisar churn de clientes usando tabelas do Unity Catalog, construir um job via
 ## Restrições
 - Não criar tabelas no schema prod diretamente — usar dev target
 - Cluster deve usar spot instances
+
+## Credenciais
+
+| Credencial | Fonte | Como usar |
+|------------|-------|-----------|
+| Databricks token | `~/.databrickscfg` → profile: `prod` | `--profile prod` no CLI |
 ```
 
 ---
@@ -52,8 +58,9 @@ Approved on: 2026-04-09
 |----|--------|----------|-----------------|------|--------|
 | task-001 | Explorar tabelas e schema | claude-code | sonnet | discovery | pending |
 | task-002 | Montar databricks.yml e job config | copilot | gpt-5.4·high | implementation | pending |
-| task-003 | Deploy bundle e disparar job | claude-code | sonnet | deployment | pending |
-| task-004 | Monitorar job e gerar relatório | claude-code | sonnet | verification | pending |
+| task-003 | Preflight: validar CLI e targets | claude-code | sonnet | preflight | pending |
+| task-004 | Deploy bundle e disparar job | claude-code | sonnet | deployment | pending |
+| task-005 | Monitorar job e gerar relatório | claude-code | sonnet | verification | pending |
 ```
 
 ---
@@ -63,8 +70,9 @@ Approved on: 2026-04-09
 ```
 task-001 (discovery)
 └── task-002 (implementation)
-    └── task-003 (deployment)
-        └── task-004 (verification)
+    └── task-003 (preflight)
+        └── task-004 (deployment)
+            └── task-005 (verification)
 ```
 
 ---
@@ -155,10 +163,51 @@ Criar a estrutura do Asset Bundle com databricks.yml e a definição do job de a
 
 ---
 
-### task-003.md — Deploy bundle e disparar job
+### task-003.md — Preflight: validar CLI e targets
 
 ```markdown
-# Task 003 — Deploy bundle e disparar job
+# Task 003 — Preflight: validar CLI e targets
+
+Status: pending
+Type: preflight
+
+## Objetivo
+Verificar que o Databricks CLI está instalado, autenticado, e que os targets
+dev e prod existem e são acessíveis antes de tentar deploy.
+
+## Contexto necessário
+- `.ai-dev/context.md` — seções: profile databricks, targets
+
+## Inputs
+- `databricks.yml`
+
+## Outputs esperados
+- `.ai-dev/discovery/preflight-003.md` — checklist com resultado de cada verificação
+
+## Executor
+- Agente: claude-code
+- Modelo (Claude): sonnet
+
+## Dependências
+- Requer: task-002 (status: done)
+- Bloqueia: task-004
+
+## Critério de aceite
+- [ ] Databricks CLI instalado e acessível (`databricks --version`)
+- [ ] Profile `prod` autenticado (`databricks auth env --profile prod`)
+- [ ] `databricks bundle validate --target dev` sem erros
+- [ ] Checklist escrito em preflight-003.md
+
+## Notas
+Se qualquer check falhar, registrar qual falhou e por quê — PM decide se corrige ou para.
+```
+
+---
+
+### task-004.md — Deploy bundle e disparar job
+
+```markdown
+# Task 004 — Deploy bundle e disparar job
 
 Status: pending
 Type: deployment
@@ -168,6 +217,7 @@ Fazer deploy do Asset Bundle no target dev e disparar o job, registrando o run_i
 
 ## Contexto necessário
 - `.ai-dev/context.md` — seções: profile databricks, targets
+- `.ai-dev/discovery/preflight-003.md` — resultado do preflight
 - `databricks.yml`
 
 ## Inputs
@@ -182,13 +232,17 @@ Fazer deploy do Asset Bundle no target dev e disparar o job, registrando o run_i
 - Modelo (Claude): sonnet
 
 ## Dependências
-- Requer: task-002 (status: done)
-- Bloqueia: task-004
+- Requer: task-003 (status: done)
+- Bloqueia: task-005
 
 ## Critério de aceite
 - [ ] databricks bundle deploy --target dev executado sem erros
 - [ ] Job disparado via databricks bundle run churn_analysis
 - [ ] .ai-dev/discovery/job-run.md criado com run_id válido
+
+## Rollback
+Se deploy falhar: `databricks bundle destroy --target dev --profile prod`
+Se job falhar no start: nenhum rollback necessário — estado do workspace não muda.
 
 ## Notas
 Comandos esperados:
@@ -199,10 +253,10 @@ Capturar o run_id do output e escrever em job-run.md.
 
 ---
 
-### task-004.md — Monitorar job e gerar relatório
+### task-005.md — Monitorar job e gerar relatório
 
 ```markdown
-# Task 004 — Monitorar job e gerar relatório
+# Task 005 — Monitorar job e gerar relatório
 
 Status: pending
 Type: verification
@@ -218,14 +272,14 @@ Acompanhar a execução do job até conclusão e gerar relatório com resultado,
 - `.ai-dev/discovery/job-run.md`
 
 ## Outputs esperados
-- `.ai-dev/reports/delivery-004.md` — relatório de execução do job
+- `.ai-dev/reports/delivery-005.md` — relatório de execução do job
 
 ## Executor
 - Agente: claude-code
 - Modelo (Claude): sonnet
 
 ## Dependências
-- Requer: task-003 (status: done)
+- Requer: task-004 (status: done)
 - Bloqueia: nenhuma
 
 ## Critério de aceite
@@ -251,8 +305,9 @@ Plan status: approved
 Tasks
   ✅ done    : task-001 — Explorar tabelas e schema
   🔄 running : task-002 — Montar databricks.yml e job config (copilot · gpt-5.4·high)
-  🔜 next    : task-003 — Deploy bundle e disparar job
-  ⏳ pending : task-004 — Monitorar job e gerar relatório
+  🔜 next    : task-003 — Preflight: validar CLI e targets
+  ⏳ pending : task-004 — Deploy bundle e disparar job
+  ⏳ pending : task-005 — Monitorar job e gerar relatório
 
 Next action: Aguardando subagent copilot concluir task-002.
 ```
@@ -264,18 +319,21 @@ Next action: Aguardando subagent copilot concluir task-002.
 1. **Não é um repo** — `.ai-dev/` vive na pasta do estudo, `.databricksignore` cuida do versionamento
 2. **Discovery como task de primeira classe** — o agente explora o ambiente real e escreve o que encontrou; nada é assumido no plano
 3. **Cadeia de arquivos** — cada task deixa um arquivo que é o input exato da próxima; nenhum contexto se perde entre subagents
-4. **Polling de jobs** — task-004 é um loop de polling; o subagent roda, aguarda, e só escreve o relatório quando o job termina
-5. **PM visível** — após cada task, o PM resume o que aconteceu e pergunta se quer continuar
+4. **Preflight antes de deploy** — task-003 valida CLI, autenticação e targets antes de tentar deploy; falhas são baratas
+5. **Rollback definido** — task-004 (deploy) tem rollback explícito; se falhar, o PM sabe o que fazer
+6. **Polling de jobs** — task-005 é um loop de polling; o subagent roda, aguarda, e só escreve o relatório quando o job termina
+7. **PM visível** — após cada task, o PM resume o que aconteceu e pergunta se quer continuar
 
 ---
 
 ## Padrão reutilizável
 
-Este padrão (discovery → implementation → deployment → verification) funciona para qualquer pipeline de dados:
+Este padrão funciona para qualquer pipeline de dados:
 
 ```
-discovery   → "o que existe no ambiente"         → findings.md
-implementation → "o que vamos construir"          → código / config
-deployment  → "publicar e executar"              → run ID / logs
-verification → "o que aconteceu"                 → relatório
+discovery    → "o que existe no ambiente"   → findings.md
+implementation → "o que vamos construir"    → código / config
+preflight    → "estamos prontos?"           → checklist
+deployment   → "publicar e executar"        → run ID / logs
+verification → "o que aconteceu"            → relatório
 ```

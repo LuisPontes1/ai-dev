@@ -38,7 +38,17 @@ cancel.md          → /copilot:cancel
 
 ---
 
-## Instalação e autenticação
+## Importante: instalação separada
+
+**O `install.sh` do ai-dev NÃO instala o plugin.** Ele apenas verifica se o plugin existe e avisa se estiver faltando. Tasks com `executor: copilot` falham sem ele — o PM faz fallback para `claude-code` e registra no delivery report.
+
+O plugin `copilot-plugin-cc` é instalado separadamente como um plugin do Claude Code. Consulte a documentação do plugin para instruções de instalação.
+
+Após instalação do plugin, verifique que tudo está funcionando:
+
+```
+/copilot:setup
+```
 
 ### Pré-requisitos
 
@@ -46,17 +56,9 @@ cancel.md          → /copilot:cancel
 - GitHub Copilot ativo na sua conta GitHub
 - GitHub CLI autenticado (`gh auth status`)
 
-### Verificar status
-
-```
-/copilot:setup
-```
-
-Retorna um relatório de disponibilidade. Se o Copilot CLI não estiver instalado, o comando oferece instalar via npm automaticamente.
-
 ### Autenticar
 
-Se o setup indicar que não está autenticado:
+Se o `/copilot:setup` indicar que não está autenticado:
 
 ```bash
 gh auth login

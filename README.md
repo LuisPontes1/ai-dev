@@ -1,128 +1,164 @@
 # ai-dev
 
-> Um sistema de desenvolvimento planning-first para Claude Code + GitHub Copilot.  
-> Você só fala com o chat. Os agentes trabalham.
+> Planning-first development for Claude Code + GitHub Copilot.
+> You talk to the chat. Agents do the work. Files carry the context.
 
 ---
 
-## O problema que isso resolve
+## The problem
 
-Quando você abre um repo e começa a pedir coisas ao Claude Code, o contexto fica no chat, as decisões ficam implícitas, e quando você reabre a sessão no dia seguinte não tem como saber o que foi planejado, o que foi executado, ou por quê. Se algo der errado no meio do caminho, não tem rollback, não tem auditoria.
+When you use Claude Code directly, context lives in the chat, decisions are implicit, and when you reopen the session the next day there's no record of what was planned, executed, or why. If something breaks mid-way, there's no rollback, no audit trail, no way to resume.
 
-`ai-dev` resolve isso com uma pasta `.ai-dev/` que vive em cada projeto (fora do versionamento). Ela define um contrato claro:
+`ai-dev` adds structure. A local `.ai-dev/` folder (gitignored) in each project defines a contract:
 
-- **Você só interage via chat** — nunca abre arquivo, nunca roda comando, nunca verifica status manualmente
-- **O Claude Code atua como Project Manager** — lê o estado do projeto nos arquivos, itera o plano com você, delega execução a subagents
-- **Cada task roda em subagent isolado** — recebe apenas o arquivo da task, executa, escreve o resultado em arquivo, encerra
-- **Todo contexto circula via arquivos** — auditável, reproduzível, retomável
+- **You only interact via chat** — you never open a file, run a command, or check status manually
+- **Claude Code becomes the Project Manager (PM)** — reads project state from files, iterates the plan with you, delegates execution to subagents
+- **Each task runs as an isolated subagent** — it reads only its task file, executes, writes results to files, and exits
+- **All context flows through files** — auditable, reproducible, resumable across sessions
 
 ---
 
-## Como parece na prática
+## What it looks like
 
-Você abre um repo e diz "quero adicionar autenticação JWT". O PM responde:
+You open a repo. The PM reads `.ai-dev/` and shows a dashboard:
 
 ```
 ## Project: minha-api
+Plan: approved
 
-Plan status: draft
+  ✅ done    : task-001 — Verificar dependências
+  ✅ done    : task-002 — Criar modelo User
+  🔜 next    : task-003 — Criar middleware JWT (copilot · gpt-5.4·high)
+  ⏳ pending : task-004, task-005
 
-Não encontrei .ai-dev/ neste repo. Quer que eu inicialize o sistema de planejamento?
-Vou criar a estrutura e parar para você revisar.
+Next: Ready to start task-003. Confirm?
 ```
 
-Você confirma. Ele cria `.ai-dev/context.md` preenchido com o que inferiu do projeto, e `.ai-dev/plan.md` vazio. Você revisa o contexto, descreve o que quer. O PM propõe:
+You say "go". PM spawns a subagent. When it's done, PM reads the delivery report and tells you what happened. You confirm. Next task. One at a time, you in control.
 
-```
-Proposta de plano — autenticação JWT
-
-task-001  preflight    Verificar dependências (PyJWT instalado, variáveis de env)
-task-002  discovery    Mapear rotas existentes que precisam de proteção
-task-003  implementation  Criar middleware de autenticação JWT   claude-code · sonnet
-task-004  implementation  Proteger rotas mapeadas               copilot · gpt-5.4·medium
-task-005  verification  Rodar testes e validar cobertura        claude-code · sonnet
-
-Sequência: 001 → 002 → 003 → 004 → 005
-
-Quer ajustar alguma task, trocar executor ou modelo antes de aprovar?
-```
-
-Você aprova. O PM executa uma task por vez, te mostra o resultado de cada uma, e pede confirmação antes de avançar.
+Before any execution, the PM plans with you — proposes tasks, checks each one is atomic, assigns executors and models, and waits for your explicit approval.
 
 ---
 
-## Instalação
+## Install
 
 ```bash
 git clone git@github.com:LuisPontes1/ai-dev.git
 cd ai-dev
-bash install.sh
+bash install.sh        # pass --dry-run to preview without writing
 ```
 
-Isso instala:
-- `~/CLAUDE.md` — instrui o Claude Code a operar em modo planning-first em qualquer repo
-- `~/.claude/commands/ai-dev-init.md` — slash command `/ai-dev-init` para inicializar novos projetos
+**What gets installed:**
+
+| What | Where | Purpose |
+|------|-------|---------|
+| Core instructions | `~/CLAUDE.md` | PM behavior, startup protocol, subagent template |
+| Protocol files | `~/.claude/ai-dev/planning.md` | Atomicity rules, model cascade, task types |
+| | `~/.claude/ai-dev/execution.md` | Rollback, preflight, copilot, credentials, feedback |
+| Templates | `~/.claude/ai-dev/templates/` | Starters, task/report/agent templates |
+| Toggle flag | `~/.claude/ai-dev/enabled` | System is ON when this file exists |
+| Slash commands | `~/.claude/commands/` | `/ai-dev-init`, `/ai-dev-on`, `/ai-dev-off` |
+
+The installer also checks for the Copilot plugin and warns if missing.
 
 ---
 
-## Uso
+## Turn it on and off
 
-Em qualquer repo ou pasta de projeto:
+```
+/ai-dev-on     ← activate planning-first mode
+/ai-dev-off    ← back to normal Claude Code
+```
 
-1. Abra no VS Code com Claude Code ativo
-2. Claude detecta que não tem `.ai-dev/` e pergunta se quer inicializar
-3. Confirme → `/ai-dev-init` cria a estrutura com starter do tipo de projeto detectado
-4. Revise `.ai-dev/context.md` e descreva o que quer construir
-5. O PM propõe tasks — você ajusta executor, modelo, ordem
-6. Aprove o plano → execução começa, uma task por vez
-7. Após cada task: PM resume o que foi feito e pergunta se quer continuar
+When off: zero overhead, no mentions, Claude behaves normally. Your `.ai-dev/` folders and all project state are preserved. Turn it back on with `/ai-dev-on` and the PM picks up where you left off.
 
 ---
 
-## Estrutura gerada em cada projeto
+## Usage
+
+1. Open any project in VS Code with Claude Code active
+2. PM detects no `.ai-dev/` → offers to initialize
+3. `/ai-dev-init` creates the structure using the right starter for your project type
+4. Review `.ai-dev/context.md`, describe what you want to build
+5. PM proposes tasks — you adjust executors, models, ordering
+6. Approve the plan → execution starts, one task at a time
+7. After each task: PM reads the delivery report and tells you what happened
+
+---
+
+## Architecture: core + on-demand
+
+The system is designed to use minimal context. `~/CLAUDE.md` contains only the core (~80 lines): startup, context rule, plan gate, subagent template.
+
+Heavy protocols are loaded **only when triggered**:
+
+| Event | Protocol loaded |
+|-------|----------------|
+| Planning or reviewing tasks | `~/.claude/ai-dev/planning.md` |
+| Task is `executor: copilot` | `~/.claude/ai-dev/execution.md` → Copilot section |
+| Next task is `deployment` | `~/.claude/ai-dev/execution.md` → Pre-flight section |
+| Subagent fails | `~/.claude/ai-dev/execution.md` → Rollback section |
+| Discovery finds something unexpected | `~/.claude/ai-dev/execution.md` → Feedback section |
+
+This keeps the PM's context window clean — protocols are pulled in just-in-time, not preloaded.
+
+---
+
+## Project structure
+
+Each project gets this (created by `/ai-dev-init`, gitignored):
 
 ```
-.ai-dev/                     ← gitignored, local apenas
-├── context.md               ← briefing do projeto (stack, decisões, credenciais)
-├── plan.md                  ← plano + gate de aprovação + changelog
+.ai-dev/
+├── context.md            # Project briefing: stack, architecture, credentials
+├── plan.md               # Plan + approval gate + changelog
+├── session-log.md        # Append-only PM action log (audit trail)
 ├── tasks/
-│   ├── _template.md         ← template com checklist de atomicidade
-│   └── task-001.md          ← uma task por arquivo, autocontida
+│   ├── _template.md      # Task template with atomicity checklist
+│   └── task-001.md       # One file per task — subagent's only instruction
 ├── agents/
-│   ├── assignments.md       ← task → executor + modelo + status
-│   └── roles.md             ← definição dos executores
+│   ├── assignments.md    # Task → executor · model · status
+│   └── roles.md          # Executor definitions
 ├── dependencies/
-│   └── graph.md             ← DAG de dependências entre tasks
-├── discovery/               ← findings de discovery e deployment tasks
+│   └── graph.md          # DAG: which tasks block which
+├── discovery/            # Findings from discovery/preflight/deployment tasks
 └── reports/
-    └── delivery-001.md      ← gerado automaticamente ao concluir cada task
+    └── delivery-001.md   # Written by subagent on task completion
 ```
 
 ---
 
-## Executores suportados
+## Executors
 
-| Executor | Como funciona |
-|----------|---------------|
-| `claude-code` | Subagent lê o arquivo da task e executa autonomamente |
-| `copilot` | PM invoca o plugin Copilot diretamente — sem interação manual no VS Code |
-| `manual` | PM gera arquivo de instruções — você executa e confirma |
+| Executor | How it works | When to use |
+|----------|-------------|-------------|
+| `claude-code` | Subagent reads task file, executes autonomously | Multi-file changes, architecture, tests |
+| `copilot` | PM invokes Copilot plugin directly (no manual VS Code interaction) | Code generation, refactors, CRUD |
+| `manual` | PM generates instruction file, you execute and confirm | Credentials, external systems, judgment calls |
 
-Para o executor `copilot`, o sistema usa o plugin `copilot-plugin-cc` instalado em `~/.claude/plugins/`. Veja [docs/copilot-plugin.md](docs/copilot-plugin.md) para detalhes completos.
-
----
-
-## Funciona além de repos git
-
-`.ai-dev/` funciona em qualquer diretório — incluindo projetos Databricks Asset Bundle, pastas de estudo, pipelines sem versionamento. O `install.sh` detecta `.gitignore`, `.databricksignore`, ou cria um novo. Veja o [exemplo Databricks completo](docs/databricks-example.md).
+The `copilot` executor uses the `copilot-plugin-cc` plugin. See [docs/copilot-plugin.md](docs/copilot-plugin.md). The plugin is a separate installation — `install.sh` checks for it and warns if missing, but does not install it.
 
 ---
 
-## Documentação
+## Works beyond git repos
 
-| Doc | O que cobre |
-|-----|-------------|
-| [docs/quick-start.md](docs/quick-start.md) | Primeiros passos com exemplo real de sessão |
-| [docs/overview.md](docs/overview.md) | Arquitetura completa, diagrama, fluxo detalhado |
-| [docs/copilot-plugin.md](docs/copilot-plugin.md) | Plugin copilot-plugin-cc: comandos, modelos, flags |
-| [docs/databricks-example.md](docs/databricks-example.md) | Pipeline completo no Databricks com Asset Bundle |
+`.ai-dev/` works in any directory: Databricks Asset Bundles, study folders, pipelines. The `/ai-dev-init` command detects the project type and uses the right starter template. See [Databricks example](docs/databricks-example.md).
+
+---
+
+## Documentation
+
+| Doc | What it covers |
+|-----|---------------|
+| [Quick Start](docs/quick-start.md) | Zero to first planned project, step by step |
+| [System Overview](docs/overview.md) | Full architecture, roles, flows, design decisions |
+| [Copilot Plugin](docs/copilot-plugin.md) | Plugin reference: commands, models, effort levels |
+| [Databricks Example](docs/databricks-example.md) | End-to-end pipeline with Asset Bundle |
+
+## Slash commands
+
+| Command | What it does |
+|---------|-------------|
+| `/ai-dev-on` | Enable planning-first mode |
+| `/ai-dev-off` | Disable, return to normal Claude Code |
+| `/ai-dev-init` | Initialize `.ai-dev/` in current project |

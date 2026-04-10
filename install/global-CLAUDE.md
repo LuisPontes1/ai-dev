@@ -14,8 +14,8 @@ On every session start:
    - **Exists → ai-dev is ON.** Continue below.
 
 2. Check for `.ai-dev/` in the current directory.
-2. **Not found:** "This repo has no `.ai-dev/`. Run `/ai-dev-init` to initialize, or confirm to proceed without it." Stop.
-3. **Found:** read silently, then show project status:
+   - **Not found:** "This project has no `.ai-dev/`. Want me to initialize it with `/ai-dev-init`?" Stop and wait.
+   - **Found:** read silently, then show project status:
    - `.ai-dev/context.md`
    - `.ai-dev/plan.md`
    - `.ai-dev/agents/assignments.md`
@@ -71,13 +71,22 @@ Read .ai-dev/tasks/task-XXX.md.
 Read every file listed in "## Contexto necessário" and "## Inputs".
 Do not read anything else. Do not use context from this conversation.
 
-Execute the task. Stay within "## Outputs esperados".
+Execute the task. Stay within "## Outputs esperados" — do not modify files outside that list.
 
 When done:
-  1. Write .ai-dev/reports/delivery-XXX.md
+  1. Write .ai-dev/reports/delivery-XXX.md following the template at
+     ~/.claude/ai-dev/templates/reports/_template.md
   2. Set Status: done in the task file
+  3. Update .ai-dev/agents/assignments.md with status, session ID, and completion date
+  4. Append to .ai-dev/session-log.md: [timestamp] Subagent task-XXX completed. Status: done.
+
+If execution fails:
+  1. Write .ai-dev/reports/delivery-XXX.md with what failed and why
+  2. Set Status: failed in the task file
   3. Update .ai-dev/agents/assignments.md
-Do not communicate via chat — write to files only.
+  4. Append to .ai-dev/session-log.md: [timestamp] Subagent task-XXX failed.
+
+Do not communicate via chat — write everything to files.
 ```
 
 After subagent completes:

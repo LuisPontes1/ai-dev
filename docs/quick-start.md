@@ -1,10 +1,10 @@
 # Quick Start
 
-Do zero ao primeiro projeto planejado em 10 minutos.
+From zero to first planned project in 10 minutes.
 
 ---
 
-## 1. Instalar
+## 1. Install
 
 ```bash
 git clone git@github.com:LuisPontes1/ai-dev.git
@@ -12,52 +12,59 @@ cd ai-dev
 bash install.sh
 ```
 
-O que acontece:
-- `~/CLAUDE.md` é criado (ou atualizado) com as instruções globais do sistema
-- `~/.claude/commands/ai-dev-init.md` é instalado como slash command `/ai-dev-init`
+Use `--dry-run` to preview what will be created without writing anything.
 
-Verifique:
+**What gets installed:**
+
+```
+~/CLAUDE.md                      ← PM core instructions (~80 lines)
+~/.claude/ai-dev/enabled         ← toggle flag (system is ON)
+~/.claude/ai-dev/planning.md     ← on-demand: atomicity, types, models
+~/.claude/ai-dev/execution.md    ← on-demand: rollback, preflight, copilot, credentials
+~/.claude/ai-dev/templates/      ← starters, task/report/agent templates
+~/.claude/commands/ai-dev-*.md   ← /ai-dev-init, /ai-dev-on, /ai-dev-off
+```
+
+The installer also checks for the Copilot plugin (`copilot-plugin-cc`) and warns if it's not installed — tasks with `executor: copilot` won't work without it.
+
+**Verify:**
 ```bash
-cat ~/CLAUDE.md | head -5
-# Deve mostrar: # AI-Dev Planning System — Global Instructions
+ls ~/.claude/ai-dev/
+# enabled  execution.md  planning.md  templates/
 ```
 
 ---
 
-## 2. Abrir um projeto existente
+## 2. Open a project
 
-Abra qualquer repo no VS Code com Claude Code ativo. Na primeira mensagem da sessão, o PM lê o estado do projeto e mostra:
+Open any repo in VS Code with Claude Code active. The PM reads the project state and responds:
 
 ```
-## Project: minha-api
-
-Não encontrei .ai-dev/ neste repo.
-
-Quer que eu inicialize o sistema de planejamento? Vou criar a estrutura,
-detectar o tipo de projeto e parar para você revisar.
+This project has no .ai-dev/. Want me to initialize it with /ai-dev-init?
 ```
 
-Digite "sim" ou "pode inicializar".
+Say "yes" or "go ahead".
 
 ---
 
-## 3. Inicializar
+## 3. Initialize
 
-O PM roda `/ai-dev-init` internamente. Ele:
+The PM runs `/ai-dev-init`. It:
 
-1. Detecta o tipo de projeto (`python-package`, `databricks-bundle`, `data-pipeline`, ou `generic`)
-2. Cria `.ai-dev/` com a estrutura completa
-3. Preenche `context.md` com o que inferiu do projeto
-4. Adiciona `.ai-dev/` ao `.gitignore` (ou `.databricksignore`)
+1. Detects your project type (`python-package`, `databricks-bundle`, `data-pipeline`, or `generic`)
+2. Creates `.ai-dev/` with all files, using the matching starter template
+3. Pre-fills `context.md` with what it can infer from the project
+4. Adds `.ai-dev/` to `.gitignore` (or `.databricksignore`)
 
-Resposta do PM:
+PM response:
 
 ```
-Inicializado. Detectei: python-package
+Initialized. Detected: python-package
 
-Arquivos criados:
-  .ai-dev/context.md         ← revise as seções com [TODO]
-  .ai-dev/plan.md
+Files created:
+  .ai-dev/context.md            ← review [TODO] sections
+  .ai-dev/plan.md               ← Status: draft
+  .ai-dev/session-log.md
   .ai-dev/tasks/_template.md
   .ai-dev/agents/assignments.md
   .ai-dev/agents/roles.md
@@ -65,128 +72,160 @@ Arquivos criados:
   .ai-dev/discovery/
   .ai-dev/reports/
 
-Seções que precisam de revisão em context.md:
-  - Stack → framework não identificado [TODO]
-  - Credenciais → nenhuma mapeada ainda [TODO]
+Sections needing review in context.md:
+  - Stack → framework not identified [TODO]
+  - Credentials → none mapped yet [TODO]
 
-Próximo passo: revise context.md e me diga o que você quer construir.
-Execução está bloqueada até o plano ser aprovado.
+Next: review context.md and tell me what you want to build.
+Execution is blocked until the plan is approved.
 ```
 
 ---
 
-## 4. Revisar o contexto
+## 4. Review context
 
-Abra `.ai-dev/context.md` (ou peça ao PM para mostrar o conteúdo). Complete os `[TODO]`. Exemplo:
+Tell the PM to fill in what it couldn't infer:
 
 ```
-Você: completa o context.md — o framework é FastAPI, banco é PostgreSQL,
-      credencial é DATABASE_URL via env var
+You: the framework is FastAPI, database is PostgreSQL,
+     credential is DATABASE_URL via env var
 ```
 
-O PM atualiza o arquivo e confirma.
+The PM updates `context.md` and confirms.
 
 ---
 
-## 5. Descrever o que quer fazer
+## 5. Describe what you want
 
 ```
-Você: quero adicionar autenticação JWT — login com email/senha,
-      token com expiração de 24h, proteger as rotas /users e /orders
+You: I want JWT authentication — login with email/password,
+     24h token expiry, protect the /users and /orders routes
 ```
 
-O PM pensa no plano, verifica atomicidade de cada task, atribui executor e modelo:
+The PM plans: checks atomicity, assigns executors and models, sequences tasks:
 
 ```
-Proposta de plano — Autenticação JWT
+Proposal — JWT Authentication
 
-task-001  preflight       Verificar PyJWT instalado e SECRET_KEY no env
-                          executor: claude-code · sonnet
+task-001  preflight       Verify PyJWT installed and SECRET_KEY in env
+                          claude-code · sonnet
 
-task-002  implementation  Criar modelo User e endpoint POST /auth/login
-                          executor: claude-code · sonnet
+task-002  implementation  Create User model with password hashing
+                          claude-code · sonnet
 
-task-003  implementation  Criar middleware JWT e decorator @require_auth
-                          executor: copilot · gpt-5.4·high
+task-003  implementation  Create POST /auth/login endpoint
+                          claude-code · sonnet  (depends on 002)
 
-task-004  implementation  Proteger rotas /users e /orders com @require_auth
-                          executor: copilot · gpt-5.4·medium
+task-004  implementation  Create JWT middleware and @require_auth decorator
+                          copilot · gpt-5.4·high  (depends on 003)
 
-task-005  verification    Rodar pytest e verificar cobertura das novas rotas
-                          executor: claude-code · sonnet
+task-005  implementation  Protect /users and /orders routes
+                          copilot · gpt-5.4·medium  (depends on 004)
 
-Dependências: 001 → 002 → 003 → 004 → 005
+task-006  verification    Run pytest and verify coverage
+                          claude-code · sonnet  (depends on 005)
 
-Quer ajustar alguma task antes de aprovar?
+Sequence: 001 → 002 → 003 → 004 → 005 → 006
+
+Want to adjust any task, change an executor or model, before approving?
 ```
 
 ---
 
-## 6. Aprovar o plano
+## 6. Iterate and approve
 
 ```
-Você: task-002 separa em duas — modelo User numa task e o endpoint /auth/login noutra
-```
-
-```
-PM: Atualizado. Agora são 6 tasks. task-002a cria o modelo, task-002b cria o endpoint
-    (depende de 002a). Demais tasks ajustadas. Confirma o plano?
+You: move task-004 to claude-code opus, it's architecturally important
 ```
 
 ```
-Você: aprovado
+PM: Updated. task-004 now: claude-code · opus. Confirm the plan?
 ```
 
-O PM atualiza `plan.md` para `Status: approved` e registra no changelog.
+```
+You: approved
+```
+
+PM writes `Status: approved` to `plan.md`, records it in the changelog and session log.
 
 ---
 
-## 7. Execução
+## 7. Execution
 
-O PM propõe a primeira task:
+PM proposes the first task:
 
 ```
-PM: Pronto para iniciar task-001 — preflight?
+PM: Ready to start task-001 — preflight?
     Executor: claude-code · sonnet
-    Vai verificar: PyJWT instalado, SECRET_KEY no env.
+    Will verify: PyJWT installed, SECRET_KEY in env.
 ```
 
 ```
-Você: pode
+You: go
 ```
 
-Subagent roda, escreve o resultado. PM lê e reporta:
+Subagent runs, writes the result. PM reads the delivery report:
 
 ```
-✅ task-001 concluída — preflight
+✅ task-001 complete — preflight
 
-O que foi feito: PyJWT 2.8.0 encontrado. SECRET_KEY presente no .env.
-                 Todas as pré-condições verificadas.
-Arquivos: .ai-dev/discovery/preflight-001.md
+What was done: PyJWT 2.8.0 found. SECRET_KEY present in .env.
+Files: .ai-dev/discovery/preflight-001.md
 
-Próxima: task-002a — Criar modelo User (claude-code · sonnet)
-Pode prosseguir?
+Next: task-002 — Create User model (claude-code · sonnet)
+Proceed?
 ```
 
-E assim por diante — uma task por vez, você no controle do ritmo.
+And so on — one task at a time, you in control.
 
 ---
 
-## Comandos úteis no chat
+## 8. When something goes wrong
 
-| O que dizer | O que acontece |
-|-------------|----------------|
-| "qual o status do projeto?" | PM mostra dashboard completo |
-| "pausa aqui" | PM para, aguarda próxima instrução |
-| "pula para task-004" | PM verifica dependências e adverte se bloqueada |
-| "task-003 vai pro copilot com effort high" | PM atualiza o arquivo da task |
-| "adiciona uma task para documentar a API" | PM cria nova task, insere no plano, atualiza dependências |
-| "o que a task-002 mudou exatamente?" | PM lê e resume o delivery report |
+If a subagent fails, the PM reads the task's rollback section and handles it:
+
+```
+❌ task-003 failed — Create POST /auth/login endpoint
+
+What happened: Import error — bcrypt not installed.
+Rollback: no files were modified (safe state).
+
+Options:
+  1. Add bcrypt to requirements and retry
+  2. Adjust the task to use a different hashing library
+  3. Stop and review
+```
+
+Nothing proceeds without your decision.
 
 ---
 
-## Próximos passos
+## Useful chat commands
 
-- [overview.md](overview.md) — arquitetura completa do sistema
-- [copilot-plugin.md](copilot-plugin.md) — como o plugin Copilot funciona, todos os comandos
-- [databricks-example.md](databricks-example.md) — exemplo com Databricks Asset Bundle
+| What you say | What happens |
+|-------------|--------------|
+| "project status" | PM shows full dashboard |
+| "pause here" | PM stops, waits for you |
+| "skip to task-004" | PM checks dependencies, warns if blocked |
+| "task-003 goes to copilot gpt-5.4 xhigh" | PM updates the task file |
+| "add a task for API documentation" | PM creates task, updates plan and dependencies |
+| "what did task-002 change?" | PM reads and summarizes the delivery report |
+
+---
+
+## Turn it off
+
+```
+/ai-dev-off    ← disable, Claude returns to normal behavior
+/ai-dev-on     ← re-enable, PM resumes exactly where it left off
+```
+
+When off, Claude applies no ai-dev rules — useful for exploratory sessions or quick prototyping. All `.ai-dev/` project files are preserved.
+
+---
+
+## Next
+
+- [System Overview](overview.md) — full architecture, roles, design decisions
+- [Copilot Plugin](copilot-plugin.md) — plugin reference: commands, models, effort levels
+- [Databricks Example](databricks-example.md) — end-to-end pipeline with Asset Bundle
