@@ -1,6 +1,18 @@
 Execute a task from the approved plan. Reads the task file, detects the executor, and dispatches accordingly.
 
-Usage: `/ai-dev-exec task-001` or `/ai-dev-exec` (picks the next ready task)
+Usage:
+- `/ai-dev-exec` — picks the next ready task
+- `/ai-dev-exec task-003` — executes a specific task
+- `/ai-dev-exec task-003 --model gpt-5.4 --effort xhigh` — override model and/or effort at execution time
+- `/ai-dev-exec --model opus` — override model for the next ready task
+
+Supported `--model` values:
+- Claude: `opus`, `sonnet`, `haiku`
+- Copilot: `gpt-5.4`, `codex`, `gemini`
+
+Supported `--effort` values (Copilot only): `none`, `minimal`, `low`, `medium`, `high`, `xhigh`
+
+If `--model` or `--effort` are not provided, uses the values from the task file.
 
 ---
 
@@ -23,14 +35,16 @@ If the task is blocked by an incomplete dependency, stop and tell the user.
 
 1. Read `.ai-dev/plan.md` — verify `Status: approved`. If not, stop: "Plan must be approved before execution."
 2. Read the task file fully — extract: Executor, Model, Effort, Type, Objetivo, Contexto necessário, Inputs, Outputs esperados, Critério de aceite
-3. If the task Type is `deployment`, read `~/.claude/ai-dev/execution.md` → Pre-flight section. If no `preflight` task precedes this one, warn the user.
-4. Show the user a summary and ask for confirmation:
+3. Apply overrides: if the user passed `--model` or `--effort`, use those instead of the task file values. Note: `--model` can switch executor implicitly — if the task says `executor: copilot` but the user passes `--model opus`, switch to `claude-code`. Similarly, `--model gpt-5.4` on a `claude-code` task switches to `copilot`.
+4. If the task Type is `deployment`, read `~/.claude/ai-dev/execution.md` → Pre-flight section. If no `preflight` task precedes this one, warn the user.
+5. Show the user a summary and ask for confirmation:
 
 ```
 Ready to execute: task-XXX — [title]
   Executor: [claude-code | copilot | manual] · [model] · [effort if copilot]
   Type: [type]
   Outputs: [list of expected outputs]
+  [If overridden: "⚡ Model overridden: task file says X, using Y"]
 
 Proceed?
 ```
@@ -43,7 +57,7 @@ Wait for user confirmation before continuing.
 
 ### If executor is `claude-code`:
 
-Spawn an isolated subagent with the model specified in the task file (`sonnet`, `opus`, or `haiku`). Use this prompt:
+Spawn an isolated subagent with the resolved model (`sonnet`, `opus`, or `haiku` — from task file or `--model` override). Use this prompt:
 
 ```
 Read .ai-dev/tasks/task-XXX.md.
@@ -79,9 +93,9 @@ Read `~/.claude/ai-dev/execution.md` → Copilot section.
    - The expected outputs with file paths
    - The acceptance criteria
    - Instruction to stay within the listed output files only
-3. Determine the command flags from the task file:
-   - `--model <model>` from Modelo (Copilot) field
-   - `--effort <effort>` from Effort field
+3. Determine the command flags (resolved model/effort — override takes precedence over task file):
+   - `--model <model>` from `--model` override or Modelo (Copilot) field
+   - `--effort <effort>` from `--effort` override or Effort field
    - `--write` (always, unless the task type is `discovery` or `verification`)
 4. For simple tasks (Type: `preflight`, `discovery`, `verification`, or single-file `implementation`):
    ```bash
