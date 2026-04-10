@@ -152,19 +152,28 @@ PM writes `Status: approved` to `plan.md`, records it in the changelog and sessi
 
 ## 7. Execution
 
-PM proposes the first task:
+You can execute tasks with `/ai-dev-exec`:
 
 ```
-PM: Ready to start task-001 — preflight?
-    Executor: claude-code · sonnet
-    Will verify: PyJWT installed, SECRET_KEY in env.
+You: /ai-dev-exec
+```
+
+The command detects the next ready task, shows a summary, and asks for confirmation:
+
+```
+Ready to execute: task-001 — Verify PyJWT installed and SECRET_KEY in env
+  Executor: claude-code · sonnet
+  Type: preflight
+  Outputs: .ai-dev/discovery/preflight-001.md
+
+Proceed?
 ```
 
 ```
 You: go
 ```
 
-Subagent runs, writes the result. PM reads the delivery report:
+The command dispatches to the right executor automatically — subagent for `claude-code`, Copilot companion for `copilot`, instruction file for `manual`. After completion, PM reads the delivery report:
 
 ```
 ✅ task-001 complete — preflight
@@ -175,6 +184,16 @@ Files: .ai-dev/discovery/preflight-001.md
 Next: task-002 — Create User model (claude-code · sonnet)
 Proceed?
 ```
+
+You can also execute a specific task: `/ai-dev-exec task-003`
+
+After implementation tasks, review with `/ai-dev-review`:
+
+```
+You: /ai-dev-review task-004
+```
+
+This runs a Copilot review aware of the task context — objective, acceptance criteria, and changed files.
 
 And so on — one task at a time, you in control.
 
@@ -202,8 +221,12 @@ Nothing proceeds without your decision.
 
 ## Useful chat commands
 
-| What you say | What happens |
-|-------------|--------------|
+| Command / what you say | What happens |
+|------------------------|--------------|
+| `/ai-dev-exec` | Execute the next ready task (auto-detects executor) |
+| `/ai-dev-exec task-003` | Execute a specific task |
+| `/ai-dev-review` | Copilot review of the last completed task |
+| `/ai-dev-review --adversarial` | Adversarial review (questions design decisions) |
 | "project status" | PM shows full dashboard |
 | "pause here" | PM stops, waits for you |
 | "skip to task-004" | PM checks dependencies, warns if blocked |

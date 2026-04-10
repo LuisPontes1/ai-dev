@@ -11,7 +11,31 @@ The final user-visible response must be Copilot's output verbatim.
 Raw user request:
 $ARGUMENTS
 
-Execution mode:
+## ai-dev context enrichment
+
+Before routing, check if ai-dev is active and has a relevant task:
+
+1. Check if `~/.claude/ai-dev/enabled` exists AND `.ai-dev/` exists in the current directory.
+2. If ai-dev is active:
+   - Read `.ai-dev/agents/assignments.md`
+   - Find any task with status `in-progress` and `executor: copilot`
+   - If found, read `.ai-dev/tasks/task-XXX.md` and all files in "## Contexto necessário" and "## Inputs"
+   - Prepend the task context to the user's request:
+     ```
+     Context from ai-dev task-XXX:
+     Objective: [from task file]
+     Expected outputs: [from task file]
+     Acceptance criteria: [from task file]
+
+     Relevant context:
+     [contents of context files, inline]
+
+     User request: [original $ARGUMENTS]
+     ```
+   - Use the model and effort from the task file unless the user explicitly overrides with `--model` or `--effort`
+3. If ai-dev is not active or no copilot task is in-progress, proceed with the raw request as-is.
+
+## Execution mode
 
 - If the request includes `--background`, run the `copilot:copilot-rescue` subagent in the background.
 - If the request includes `--wait`, run the `copilot:copilot-rescue` subagent in the foreground.

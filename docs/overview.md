@@ -138,17 +138,26 @@ The PM reads `~/.claude/ai-dev/planning.md` and works with you to design the pla
 
 ### Execution phase
 
-For each task, in order:
+Use `/ai-dev-exec` to execute tasks. It reads the task file, detects the executor, and dispatches:
 
 ```
-PM shows task summary → you confirm
+/ai-dev-exec              → picks next ready task
+/ai-dev-exec task-003     → executes specific task
+```
+
+For each task:
+
+```
+/ai-dev-exec shows task summary → you confirm
      │
      ▼
-PM spawns isolated subagent
-(reads only: task file + referenced files)
+Dispatches by executor:
+  claude-code → spawns isolated subagent (reads only: task file + referenced files)
+  copilot     → builds prompt from task context, calls companion script with model/effort
+  manual      → generates instruction file, waits for user to execute
      │
      ▼
-Subagent executes → writes delivery report → updates status
+Executor completes → delivery report written → status updated
      │
      ▼
 PM reads delivery report
@@ -161,6 +170,13 @@ PM reads delivery report
            → you decide how to adjust the plan
            → PM updates affected tasks, logs to changelog
            → then proposes next task
+```
+
+After implementation tasks, use `/ai-dev-review` for context-aware Copilot review:
+
+```
+/ai-dev-review              → reviews last completed task
+/ai-dev-review --adversarial → questions design decisions, not just bugs
 ```
 
 ### When a task fails

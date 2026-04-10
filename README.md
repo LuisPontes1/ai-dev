@@ -164,3 +164,13 @@ The `copilot` executor uses the integrated Copilot plugin (`@github/copilot-sdk`
 | `/ai-dev-on` | Enable planning-first mode |
 | `/ai-dev-off` | Disable, return to normal Claude Code |
 | `/ai-dev-init` | Initialize `.ai-dev/` in current project |
+| `/ai-dev-exec` | Execute next task (auto-detects executor: claude-code, copilot, or manual) |
+| `/ai-dev-exec task-003` | Execute a specific task |
+| `/ai-dev-review` | Copilot review aware of task context (objective, criteria, changed files) |
+| `/copilot:setup` | Verify Copilot plugin status and authentication |
+| `/copilot:review` | Code review via Copilot (working tree or branch) |
+| `/copilot:adversarial-review` | Review that questions design decisions and trade-offs |
+| `/copilot:rescue` | Delegate a task to Copilot (ai-dev-aware when system is ON) |
+| `/copilot:status` | Check background job status |
+| `/copilot:result` | Retrieve result of a finished job |
+| `/copilot:cancel` | Cancel an active job |
