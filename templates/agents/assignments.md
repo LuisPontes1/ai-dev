@@ -24,10 +24,10 @@ Last updated: YYYY-MM-DD
 |--------|-------------|
 | `pending` | Aguardando início (dependências ok ou sem dependências) |
 | `blocked` | Aguardando conclusão de outra task |
-| `in-progress` | Em execução por claude-code |
-| `awaiting-copilot` | Brief gerado — aguardando execução no Copilot |
+| `in-progress` | Subagent em execução (claude-code ou copilot via plugin) |
 | `awaiting-human` | Instruções geradas — aguardando execução manual |
 | `done` | Concluída — delivery report disponível em `reports/` |
+| `failed` | Falhou — ver `reports/rollback-XXX.md` e aguardar decisão do usuário |
 
 ---
 

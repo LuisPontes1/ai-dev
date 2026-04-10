@@ -46,6 +46,10 @@ Empty file — preserves directory for discovery and deployment task outputs.
 **`.ai-dev/reports/.gitkeep`**
 Empty file — preserves directory for delivery reports.
 
+**`.ai-dev/session-log.md`**
+Copy the session-log template. Write the first entry:
+`[current date HH:MM] .ai-dev/ initialized by /ai-dev-init.`
+
 ## Step 3 — Update ignore file
 
 - If `.gitignore` exists: append `.ai-dev/`
