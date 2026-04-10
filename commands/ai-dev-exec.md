@@ -57,9 +57,11 @@ Wait for user confirmation before continuing.
 
 ### If executor is `claude-code`:
 
-Spawn an isolated subagent with the resolved model (`sonnet`, `opus`, or `haiku` — from task file or `--model` override). Use this prompt:
+1. Write the subagent prompt to `.ai-dev/tasks/task-XXX-prompt.md`:
 
-```
+```markdown
+# Subagent Prompt — task-XXX
+
 Read .ai-dev/tasks/task-XXX.md.
 Read every file listed in "## Contexto necessário" and "## Inputs".
 Do not read anything else. Do not use context from this conversation.
@@ -82,12 +84,15 @@ If execution fails:
 Do not communicate via chat — write everything to files.
 ```
 
+2. Spawn an isolated subagent with the resolved model (`sonnet`, `opus`, or `haiku`).
+   The subagent's prompt is: "Read and execute `.ai-dev/tasks/task-XXX-prompt.md`."
+
 ### If executor is `copilot`:
 
 Read `~/.claude/ai-dev/execution.md` → Copilot section.
 
 1. Read all files from "## Contexto necessário" and "## Inputs"
-2. Build a self-contained prompt that includes:
+2. Write a self-contained prompt file to `.ai-dev/tasks/task-XXX-prompt.md` that includes:
    - The task objective
    - All context file contents inline (the Copilot agent cannot read files itself)
    - The expected outputs with file paths
@@ -100,10 +105,11 @@ Read `~/.claude/ai-dev/execution.md` → Copilot section.
 4. For simple tasks (Type: `preflight`, `discovery`, `verification`, or single-file `implementation`):
    ```bash
    node ~/.claude/plugins/ai-dev-copilot/plugins/copilot/scripts/copilot-companion.mjs \
-     task --write --model <model> --effort <effort> "<prompt>"
+     task --write --model <model> --effort <effort> \
+     --prompt-file .ai-dev/tasks/task-XXX-prompt.md
    ```
 5. For complex tasks (Type: `implementation` with multiple outputs or architectural scope):
-   Use `/copilot:rescue --model <model> --effort <effort> <prompt>` instead.
+   Write the prompt file first, then use `/copilot:rescue --model <model> --effort <effort>` — the rescue command will detect the active ai-dev task and read the prompt file.
 6. After Copilot completes:
    - Verify acceptance criteria against actual results
    - Write `.ai-dev/reports/delivery-XXX.md` following the template

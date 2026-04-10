@@ -62,9 +62,13 @@ If the user gives instructions that belong in `.ai-dev/`, offer to write them to
 
 ## Task execution — core
 
-When a task is ready (plan approved, dependencies done, user confirmed):
+Use `/ai-dev-exec` to execute tasks. It handles executor detection, prompt generation, and dispatch.
 
-**Spawn an isolated subagent.** Prompt template:
+When executing manually or when `/ai-dev-exec` is not available:
+
+**All subagent prompts must be written to files — never passed inline.**
+
+1. Write the prompt to `.ai-dev/tasks/task-XXX-prompt.md` with the following content:
 
 ```
 Read .ai-dev/tasks/task-XXX.md.
@@ -88,6 +92,11 @@ If execution fails:
 
 Do not communicate via chat — write everything to files.
 ```
+
+2. Dispatch by executor:
+   - **claude-code:** spawn isolated subagent → "Read and execute `.ai-dev/tasks/task-XXX-prompt.md`."
+   - **copilot:** `copilot-companion.mjs task --write --prompt-file .ai-dev/tasks/task-XXX-prompt.md --model <model> --effort <effort>`
+   - **manual:** write `.ai-dev/tasks/task-XXX-instructions.md`, wait for user
 
 After subagent completes:
 1. Read `delivery-XXX.md`

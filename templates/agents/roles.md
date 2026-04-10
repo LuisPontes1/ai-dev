@@ -34,13 +34,13 @@
 
 **How it works:**
 1. Claude Code reads `.ai-dev/tasks/task-XXX.md` fully
-2. Builds a prompt with: objective, relevant file contents, outputs expected, acceptance criteria
-3. Calls the Copilot companion script:
+2. Writes a self-contained prompt to `.ai-dev/tasks/task-XXX-prompt.md` (all context inline — Copilot cannot read project files)
+3. Calls the Copilot companion script with `--prompt-file`:
    ```bash
    node ~/.claude/plugins/ai-dev-copilot/plugins/copilot/scripts/copilot-companion.mjs \
-     task --write [prompt]
+     task --write --prompt-file .ai-dev/tasks/task-XXX-prompt.md
    ```
-4. For complex tasks, delegates via `/copilot:rescue` (Copilot runs as a subagent)
+4. For complex tasks, delegates via `/copilot:rescue` (detects prompt file when ai-dev is active)
 5. Monitors result, verifies acceptance criteria
 6. Writes delivery report and updates `assignments.md`
 

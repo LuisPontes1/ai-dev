@@ -239,7 +239,12 @@ Cancela um job em andamento.
 
 ## Como o sistema ai-dev usa o plugin
 
-Quando uma task tem `executor: copilot`, o subagent spawned pelo PM executa:
+Quando uma task tem `executor: copilot`, o `/ai-dev-exec` (ou o PM manualmente):
+
+1. Lê `.ai-dev/tasks/task-XXX.md` (objetivo, outputs esperados, critério de aceite)
+2. Lê todos os arquivos em `## Contexto necessário` e `## Inputs`
+3. Escreve um prompt autocontido em `.ai-dev/tasks/task-XXX-prompt.md` — todo contexto inline
+4. Invoca o companion via `--prompt-file` (prompts nunca são passados inline):
 
 ```bash
 node ~/.claude/plugins/ai-dev-copilot/plugins/copilot/scripts/copilot-companion.mjs \
@@ -247,18 +252,14 @@ node ~/.claude/plugins/ai-dev-copilot/plugins/copilot/scripts/copilot-companion.
   --write \
   --model gpt-5.4 \
   --effort high \
-  "[prompt construído a partir do arquivo da task]"
+  --prompt-file .ai-dev/tasks/task-XXX-prompt.md
 ```
 
 O `--write` é obrigatório — sem ele o Copilot sugere mas não aplica as mudanças nos arquivos.
 
-**O prompt é construído pelo subagent assim:**
-1. Lê `.ai-dev/tasks/task-XXX.md` (objetivo, outputs esperados, critério de aceite)
-2. Lê todos os arquivos em `## Contexto necessário` e `## Inputs`
-3. Monta um prompt autocontido com todo esse contexto inline
-4. Passa para `copilot-companion.mjs task --write [prompt]`
+O prompt fica em arquivo por design — auditável, reproduzível, e consistente com o princípio do sistema: "context lives in files, never in chat."
 
-Para tasks complexas (type: `implementation` com múltiplos arquivos ou lógica arquitetural), o subagent usa `/copilot:rescue` em vez de `task` — isso dá ao Copilot capacidade de raciocínio completo e thread management.
+Para tasks complexas (type: `implementation` com múltiplos arquivos ou lógica arquitetural), usa `/copilot:rescue` — que automaticamente detecta a task ativa e lê o prompt file quando ai-dev está ON.
 
 **Após execução:**
 1. Subagent verifica os critérios de aceite da task

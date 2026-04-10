@@ -42,13 +42,14 @@ Before spawning the deployment subagent, check `assignments.md` for a completed 
 
 1. Read the task file fully (objective, inputs, outputs, acceptance criteria)
 2. Read all files in `## Contexto necessário` and `## Inputs`
-3. Build a self-contained prompt — must not rely on context outside the task file
-4. Invoke via companion script:
+3. Write a self-contained prompt to `.ai-dev/tasks/task-XXX-prompt.md` — all context inline, must not rely on anything outside the file
+4. Invoke via companion script using `--prompt-file` (never pass prompt inline):
    ```bash
    node ~/.claude/plugins/ai-dev-copilot/plugins/copilot/scripts/copilot-companion.mjs \
-     task --write --model <model> --effort <effort> "[prompt]"
+     task --write --model <model> --effort <effort> \
+     --prompt-file .ai-dev/tasks/task-XXX-prompt.md
    ```
-   For complex reasoning tasks (`Type: implementation` with architectural scope): use `/copilot:rescue` instead.
+   For complex reasoning tasks (`Type: implementation` with architectural scope): use `/copilot:rescue` instead — it detects the prompt file when ai-dev is active.
 5. Monitor with `/copilot:status`, retrieve with `/copilot:result`
 6. Verify acceptance criteria, write delivery report, update `assignments.md`
 
