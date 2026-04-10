@@ -1,54 +1,103 @@
-# AI-Dev System — Overview
+# Visão Geral do Sistema
 
-## O que é
+---
 
-`.ai-dev/` é uma pasta local (gitignored) que vive em cada repo. Ela implementa um modelo de desenvolvimento onde:
+## Princípio central
 
-- **Você só fala com o chat** — nunca roda comandos, abre arquivos ou verifica status manualmente
-- **O chat é o Project Manager (PM)** — lê os arquivos `.ai-dev/`, mostra o estado do projeto, itera no plano, delega execução
-- **Cada task roda como subagent isolado** — recebe apenas o arquivo da task, executa, escreve o resultado em arquivos
-- **Todo contexto circula via arquivos** — auditável, reproduzível, sem ambiguidade de chat
+**Todo contexto circula via arquivos. Nenhum agente recebe instrução via chat ou argumento de linha de comando.**
+
+Isso tem duas consequências práticas:
+
+1. **Auditabilidade por natureza** — qualquer decisão, instrução ou resultado está em algum arquivo com data e autor
+2. **Subagents verdadeiramente isolados** — um subagent que lê apenas o arquivo da task não pode tomar decisões baseadas em contexto que não deveria ter
 
 ---
 
 ## Papéis
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    VOCÊ (usuário)                    │
-│         só fala via chat · aprova plano e tasks      │
-└──────────────────────────┬──────────────────────────┘
-                           │ chat
-┌──────────────────────────▼──────────────────────────┐
-│              PROJECT MANAGER (PM)                    │
-│         Claude Code · modelo: Opus 4.6               │
-│                                                      │
-│  • Lê .ai-dev/ na abertura da sessão                 │
-│  • Mostra status do projeto                          │
-│  • Itera no plano com o usuário                      │
-│  • Verifica atomicidade das tasks                    │
-│  • Confirma com usuário antes de cada task           │
-│  • Spawna subagents para execução                    │
-│  • Lê delivery reports e reporta resultados          │
-└──────┬──────────────────────────────┬───────────────┘
-       │ spawn subagent               │ spawn subagent
-       ▼                              ▼
-┌─────────────┐               ┌──────────────────────┐
-│  SUBAGENT   │               │      SUBAGENT        │
-│ claude-code │               │      copilot         │
-│             │               │                      │
-│ Lê task file│               │ Lê task file         │
-│ Executa     │               │ Chama companion.mjs  │
-│ Escreve     │               │ --write --effort X   │
-│ report      │               │ Escreve report       │
-└──────┬──────┘               └──────────┬───────────┘
-       │ escreve arquivos                 │ escreve arquivos
-       ▼                                 ▼
-┌─────────────────────────────────────────────────────┐
-│                    .ai-dev/                          │
-│   tasks/  ·  reports/  ·  agents/  ·  dependencies/ │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────┐
+│                   VOCÊ                           │
+│  Só interage via chat · nunca abre arquivo       │
+│  nunca roda comando · aprova plano e cada task   │
+└───────────────────────┬──────────────────────────┘
+                        │ chat
+┌───────────────────────▼──────────────────────────┐
+│            PROJECT MANAGER (PM)                  │
+│       Claude Code · modelo Opus 4.6              │
+│                                                  │
+│  Lê .ai-dev/ na abertura de sessão               │
+│  Mostra status do projeto                        │
+│  Itera o plano, verifica atomicidade             │
+│  Confirma com você antes de cada task            │
+│  Spawna subagents para execução                  │
+│  Lê delivery reports, reporta resultados         │
+│  Gerencia rollback em caso de falha              │
+└────────┬─────────────────────┬───────────────────┘
+         │ spawn               │ spawn
+         ▼                     ▼
+┌──────────────┐    ┌──────────────────────────┐
+│   SUBAGENT   │    │         SUBAGENT         │
+│ claude-code  │    │         copilot          │
+│              │    │                          │
+│ Lê task file │    │ Lê task file             │
+│ Executa      │    │ Monta prompt             │
+│ Escreve      │    │ Chama copilot-companion  │
+│ delivery     │    │ --write --model --effort │
+│ report       │    │ Escreve delivery report  │
+└──────┬───────┘    └────────────┬─────────────┘
+       │ escreve                 │ escreve
+       ▼                         ▼
+┌──────────────────────────────────────────────────┐
+│                  .ai-dev/                        │
+│  tasks/ · reports/ · discovery/ · agents/        │
+└──────────────────────────────────────────────────┘
 ```
+
+---
+
+## O que o PM faz em cada sessão
+
+### Na abertura
+
+1. Verifica se `.ai-dev/` existe
+2. Se não: propõe inicializar e para
+3. Se sim: lê todos os arquivos de estado e exibe o dashboard:
+
+```
+## Project: minha-api
+
+Plan status: approved
+
+Tasks
+  ✅ done     : task-001 — preflight
+  ✅ done     : task-002 — criar modelo User
+  🔜 next     : task-003 — criar middleware JWT  (claude-code · sonnet)
+  ⏳ pending  : task-004, task-005
+
+Next action: Pronto para iniciar task-003. Confirma?
+```
+
+### Durante o planejamento
+
+O PM usa Opus para raciocinar sobre o plano. Para cada task proposta, verifica:
+
+- Tem **um único objetivo**? Se não, propõe split
+- Os **outputs são enumeráveis** antes de começar?
+- Tem **rollback** definido para tasks de deployment?
+- A task que precede um deployment tem um **preflight**?
+- O modelo/effort está **calibrado** para a complexidade?
+
+### Durante a execução
+
+Para cada task:
+
+1. Mostra resumo e pergunta "pode prosseguir?"
+2. Spawna subagent com prompt que contém **apenas** o arquivo da task + arquivos referenciados
+3. Aguarda conclusão
+4. Lê delivery report — especialmente `## Impacto no plano`
+5. Se há impacto: pausa, mostra o que foi encontrado, propõe ajuste nas próximas tasks
+6. Resume resultado e propõe próxima task
 
 ---
 
@@ -59,79 +108,64 @@ Sessão aberta
      │
      ▼
 .ai-dev/ existe?
-  ├── Não → PM propõe /ai-dev-init → aguarda confirmação → inicializa → para
-  └── Sim → PM lê todos os arquivos
+  ├── Não → propõe /ai-dev-init → aguarda confirmação
+  └── Sim → lê context.md, plan.md, assignments.md, graph.md
               │
               ▼
-         PM mostra status do projeto
-         (✅ done · 🔄 running · 🔜 next · ⏳ pending · 🚫 blocked)
+         Exibe dashboard de status
               │
               ▼
-         plan.md aprovado?
-           ├── Não → PM itera plano com usuário
-           │          PM verifica atomicidade de cada task
-           │          PM atribui modelo/effort por task
-           │          Usuário aprova → PM escreve Status: approved
-           └── Sim → PM identifica próxima task disponível
+         plan.md status == approved?
+           ├── Não → itera com usuário
+           │         verifica atomicidade de cada task
+           │         atribui executor/modelo por task
+           │         aguarda aprovação explícita
+           └── Sim → identifica próxima task disponível (sem dependências pendentes)
                       │
                       ▼
-                 PM mostra resumo da task e pergunta: "Pronto para iniciar?"
-                      │
-                 Usuário confirma
+                 Type == deployment?
+                   ├── Sim → preflight concluído?
+                   │          ├── Não → spawna preflight primeiro
+                   │          └── Sim → prossegue
+                   └── Não → prossegue
                       │
                       ▼
-                 PM spawna subagent isolado
-                 (prompt = apenas o arquivo da task + arquivos referenciados)
+                 PM mostra resumo da task, aguarda confirmação
+                      │
+                      ▼
+                 Spawna subagent isolado
+                 (lê task file + arquivos referenciados, nada mais)
                       │
                       ▼
                  Subagent executa
-                 Escreve delivery report
-                 Atualiza status nos arquivos
+                 ├── Sucesso: escreve delivery report, atualiza status
+                 └── Falha:   executa rollback steps, escreve failure report
                       │
                       ▼
                  PM lê delivery report
-                 PM reporta resultado ao usuário
-                 PM mostra tasks desbloqueadas
+                 ├── Impacto no plano? → pausa, avalia, atualiza tasks afetadas
+                 └── Sem impacto → resume resultado ao usuário
                       │
                       ▼
-                 Próxima task → repete
+                 PM mostra tasks desbloqueadas
+                 Aguarda confirmação → próxima task
 ```
 
 ---
 
-## Por que arquivos e não chat
+## Tipos de task
 
-| | Via arquivos | Via chat |
-|---|---|---|
-| **Auditabilidade** | Toda instrução tem arquivo com data | Perdida ao fechar sessão |
-| **Contexto do subagent** | Lê o arquivo — contexto preciso | Receberia histórico inteiro — ruído |
-| **Reprodutibilidade** | Qualquer agente retoma de onde parou | Depende do histórico de conversa |
-| **Rastreabilidade** | Task file → delivery report → git | Implícita |
-| **Colaboração PM/subagent** | PM escreve, subagent lê, escreve de volta | Não suportado |
+| Type | Propósito | Output gerado |
+|------|-----------|---------------|
+| `preflight` | Verifica auth, targets, env vars | `.ai-dev/discovery/preflight-XXX.md` |
+| `discovery` | Explora recursos externos, escreve findings | `.ai-dev/discovery/*.md` |
+| `implementation` | Cria ou modifica código/config | Arquivos do projeto |
+| `deployment` | Executa CLI, publica, dispara jobs | `.ai-dev/discovery/job-run.md` etc. |
+| `verification` | Monitora jobs, valida resultados | `.ai-dev/reports/delivery-XXX.md` |
 
----
-
-## Subagent: isolamento e contexto
-
-O subagent recebe **apenas**:
-1. O arquivo da task (`task-XXX.md`)
-2. Os arquivos listados em `## Contexto necessário` e `## Inputs`
-
-Ele não recebe: histórico de chat, outras tasks, plano completo, nada mais.
-
-Isso é intencional — garante que cada task é verdadeiramente autocontida, e que o subagent não toma decisões baseado em contexto que não deveria ter.
-
----
-
-## Model cascade
-
-| Quem | Modelo | Justificativa |
-|------|--------|---------------|
-| PM (planejamento) | Claude Opus 4.6 | Raciocínio arquitetural, atomicidade, dependências |
-| Subagent claude-code | `sonnet` padrão · `opus` complexo · `haiku` simples | Atribuído por task |
-| Subagent copilot | `gpt-5.4·high/medium/low` · `codex·minimal` | Atribuído por task |
-
-O PM usa o modelo mais capaz para planejar bem e atribuir o modelo certo para cada execução. Tasks de geração de código simples não precisam de Opus — saves cost e tempo.
+**Regra de sequência obrigatória:**
+- `preflight` sempre precede `deployment`
+- `discovery` sempre precede `implementation` quando o escopo depende do ambiente
 
 ---
 
@@ -139,17 +173,63 @@ O PM usa o modelo mais capaz para planejar bem e atribuir o modelo certo para ca
 
 ```
 .ai-dev/
-├── context.md               # Briefing do projeto — lido pelo PM no startup
-├── plan.md                  # Plano + gate de aprovação
+│
+├── context.md
+│   └── Briefing do projeto: objetivo, stack, arquitetura, credenciais (por nome, nunca por valor)
+│       Lido pelo PM no startup e pelos subagents antes de cada task
+│
+├── plan.md
+│   └── Status (draft|approved), tabela de tasks com executor/modelo/effort,
+│       sequência, critério de conclusão, aprovação e changelog append-only
+│
 ├── tasks/
-│   ├── _template.md         # Template com checklist de atomicidade
-│   ├── task-001.md          # Instrução do subagent — autocontida
-│   └── task-001-questions.md # Dúvidas do PM antes de spawnar
+│   ├── _template.md         ← checklist de atomicidade + todos os campos
+│   ├── task-001.md          ← instrução completa para o subagent
+│   ├── task-001-questions.md ← PM escreve quando precisa de clarificação antes de spawnar
+│   └── task-001-instructions.md ← gerado para tasks manuais
+│
 ├── agents/
-│   ├── assignments.md       # Status de todas as tasks — PM lê para o dashboard
-│   └── roles.md             # Definição de executores e modelos
+│   ├── assignments.md       ← task → executor · modelo · status · session ID
+│   └── roles.md             ← definição de cada executor e como ele recebe contexto
+│
 ├── dependencies/
-│   └── graph.md             # DAG — PM verifica antes de propor próxima task
+│   └── graph.md             ← DAG: task X só inicia após task Y concluída
+│
+├── discovery/
+│   ├── preflight-001.md     ← resultado de task preflight
+│   ├── tables-findings.md   ← exemplo: resultado de discovery no Databricks
+│   └── job-run.md           ← exemplo: run_id de task de deployment
+│
 └── reports/
-    └── delivery-001.md      # Escrito pelo subagent — PM lê e resume ao usuário
+    └── delivery-001.md      ← gerado pelo subagent ao concluir task
+        Campos: o que foi feito, arquivos modificados, critério de aceite,
+                desvios, tasks desbloqueadas, impacto no plano
 ```
+
+---
+
+## Por que não usar só o chat
+
+| | Sistema .ai-dev/ | Só o chat |
+|---|---|---|
+| **Contexto entre sessões** | Persistido em arquivos | Perdido ao fechar |
+| **Subagent recebe** | Apenas o arquivo da task | Histórico inteiro da conversa |
+| **Auditoria** | Cada ação → delivery report | Implícita no histórico |
+| **Rollback** | Protocolo definido por task | Manual |
+| **Retomada** | PM lê arquivos e continua | Requer re-explicar tudo |
+| **Multi-executor** | Claude Code + Copilot + manual | Só Claude Code |
+
+---
+
+## Contextos suportados
+
+`.ai-dev/` funciona em qualquer diretório — não precisa ser um repo git:
+
+| Contexto | Ignore file | Starter |
+|----------|-------------|---------|
+| Git repo | `.gitignore` | `python-package` ou `generic` |
+| Databricks Bundle | `.databricksignore` | `databricks-bundle` |
+| Pipeline de dados | `.gitignore` | `data-pipeline` |
+| Pasta de estudo | `.gitignore` (criado) | `generic` |
+
+O `/ai-dev-init` detecta o tipo automaticamente e usa o starter correto para pré-preencher `context.md`.
