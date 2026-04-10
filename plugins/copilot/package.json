@@ -1,0 +1,17 @@
+{
+  "name": "@ai-dev/copilot-plugin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Copilot integration for ai-dev — review code and delegate tasks via GitHub Copilot SDK.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@github/copilot-sdk": "^0.2.2"
+  }
+}

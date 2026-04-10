@@ -45,7 +45,7 @@ Before spawning the deployment subagent, check `assignments.md` for a completed 
 3. Build a self-contained prompt — must not rely on context outside the task file
 4. Invoke via companion script:
    ```bash
-   node ~/.claude/plugins/copilot-plugin-cc/plugins/copilot/scripts/copilot-companion.mjs \
+   node ~/.claude/plugins/ai-dev-copilot/plugins/copilot/scripts/copilot-companion.mjs \
      task --write --model <model> --effort <effort> "[prompt]"
    ```
    For complex reasoning tasks (`Type: implementation` with architectural scope): use `/copilot:rescue` instead.

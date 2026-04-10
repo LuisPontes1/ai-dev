@@ -58,8 +58,10 @@ bash install.sh        # pass --dry-run to preview without writing
 | Templates | `~/.claude/ai-dev/templates/` | Starters, task/report/agent templates |
 | Toggle flag | `~/.claude/ai-dev/enabled` | System is ON when this file exists |
 | Slash commands | `~/.claude/commands/` | `/ai-dev-init`, `/ai-dev-on`, `/ai-dev-off` |
+| Copilot plugin | `~/.claude/plugins/ai-dev-copilot/` | Copilot SDK + programmatic integration |
+| Copilot commands | `~/.claude/commands/copilot/` | `/copilot:setup`, `/copilot:review`, `/copilot:rescue`, ... |
 
-The installer also checks for the Copilot plugin and warns if missing.
+The installer includes the Copilot plugin with `@github/copilot-sdk` — no separate installation needed. Requires Node.js >= 18.18 and `gh auth login` for GitHub authentication.
 
 ---
 
@@ -136,7 +138,7 @@ Each project gets this (created by `/ai-dev-init`, gitignored):
 | `copilot` | PM invokes Copilot plugin directly (no manual VS Code interaction) | Code generation, refactors, CRUD |
 | `manual` | PM generates instruction file, you execute and confirm | Credentials, external systems, judgment calls |
 
-The `copilot` executor uses the `copilot-plugin-cc` plugin. See [docs/copilot-plugin.md](docs/copilot-plugin.md). The plugin is a separate installation — `install.sh` checks for it and warns if missing, but does not install it.
+The `copilot` executor uses the integrated Copilot plugin (`@github/copilot-sdk`), installed automatically by `install.sh`. See [docs/copilot-plugin.md](docs/copilot-plugin.md) for commands, models, and effort levels.
 
 ---
 

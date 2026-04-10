@@ -1,50 +1,69 @@
 # Copilot Plugin — Referência Completa
 
-O sistema usa o plugin `copilot-plugin-cc` para invocar o GitHub Copilot diretamente do Claude Code — sem interação manual no VS Code. Esta página cobre tudo: instalação, comandos, modelos, flags, e como o sistema `.ai-dev/` usa o plugin para executar tasks.
+O ai-dev inclui um plugin integrado que invoca o GitHub Copilot diretamente do Claude Code — sem interação manual no VS Code. Usa o `@github/copilot-sdk` (v0.2.2+) para criar sessões, enviar prompts, monitorar jobs em background e recuperar resultados programaticamente.
 
 ---
 
 ## O que é o plugin
 
-O `copilot-plugin-cc` é um plugin para Claude Code que expõe um script Node.js (`copilot-companion.mjs`) capaz de criar sessões Copilot, enviar prompts, monitorar jobs em background e recuperar resultados — tudo de forma programática.
+O plugin expõe o script `copilot-companion.mjs` — uma CLI Node.js que se comunica com o Copilot via JSON-RPC através do SDK oficial.
 
-**Localização após instalação:**
+**Código fonte no repo:**
 ```
-~/.claude/plugins/copilot-plugin-cc/
-└── plugins/copilot/
-    ├── scripts/
-    │   ├── copilot-companion.mjs      ← script principal
-    │   ├── session-lifecycle-hook.mjs ← hook de sessão
-    │   ├── stop-review-gate-hook.mjs  ← hook de review gate
-    │   └── lib/                       ← módulos internos
-    │       ├── copilot-client.mjs     ← integração com API Copilot
-    │       ├── tracked-jobs.mjs       ← controle de jobs em background
-    │       ├── state.mjs              ← persistência de jobs
-    │       └── ...
-    └── schemas/
-        └── review-output.schema.json
+ai-dev/plugins/copilot/
+├── package.json                    ← @github/copilot-sdk ^0.2.2
+├── .claude-plugin/plugin.json
+├── scripts/
+│   ├── copilot-companion.mjs       ← script principal (~960 linhas)
+│   ├── session-lifecycle-hook.mjs  ← hook de sessão
+│   ├── stop-review-gate-hook.mjs   ← hook de review gate
+│   └── lib/                        ← módulos internos
+│       ├── copilot-client.mjs      ← integração com SDK Copilot
+│       ├── tracked-jobs.mjs        ← controle de jobs em background
+│       ├── state.mjs               ← persistência de jobs
+│       ├── render.mjs              ← formatação de output
+│       ├── git.mjs                 ← operações git para reviews
+│       └── ...
+├── commands/                       ← slash commands
+├── agents/                         ← copilot-rescue subagent
+├── prompts/                        ← templates de prompt
+├── schemas/                        ← JSON schema para reviews
+├── hooks/                          ← hooks de sessão
+└── skills/                         ← skills internas
 ```
 
-**Slash commands instalados em `~/.claude/commands/copilot/`:**
+**Instalado pelo `install.sh` em:**
 ```
-setup.md           → /copilot:setup
-review.md          → /copilot:review
-adversarial-review.md → /copilot:adversarial-review
-rescue.md          → /copilot:rescue
-status.md          → /copilot:status
-result.md          → /copilot:result
-cancel.md          → /copilot:cancel
+~/.claude/plugins/ai-dev-copilot/   ← plugin + node_modules
+~/.claude/commands/copilot/          ← slash commands
+```
+
+**Slash commands disponíveis:**
+```
+/copilot:setup              → verificar estado e autenticação
+/copilot:review             → code review do working tree ou branch
+/copilot:adversarial-review → review que questiona decisões de design
+/copilot:rescue             → delegar tarefa completa ao Copilot
+/copilot:status             → status de jobs em background
+/copilot:result             → resultado de job concluído
+/copilot:cancel             → cancelar job ativo
 ```
 
 ---
 
-## Importante: instalação separada
+## Instalação
 
-**O `install.sh` do ai-dev NÃO instala o plugin.** Ele apenas verifica se o plugin existe e avisa se estiver faltando. Tasks com `executor: copilot` falham sem ele — o PM faz fallback para `claude-code` e registra no delivery report.
+O plugin é instalado automaticamente pelo `install.sh` do ai-dev:
 
-O plugin `copilot-plugin-cc` é instalado separadamente como um plugin do Claude Code. Consulte a documentação do plugin para instruções de instalação.
+```bash
+git clone git@github.com:LuisPontes1/ai-dev.git
+cd ai-dev
+bash install.sh
+```
 
-Após instalação do plugin, verifique que tudo está funcionando:
+O installer copia o plugin, roda `npm install` (que baixa o `@github/copilot-sdk`), e instala os slash commands.
+
+Após instalação, verifique:
 
 ```
 /copilot:setup
@@ -52,9 +71,9 @@ Após instalação do plugin, verifique que tudo está funcionando:
 
 ### Pré-requisitos
 
-- Node.js instalado (`node --version`)
-- GitHub Copilot ativo na sua conta GitHub
-- GitHub CLI autenticado (`gh auth status`)
+- **Node.js >= 18.18** (`node --version`)
+- **GitHub Copilot** ativo na conta GitHub
+- **GitHub CLI** autenticado (`gh auth status`)
 
 ### Autenticar
 
@@ -223,7 +242,7 @@ Cancela um job em andamento.
 Quando uma task tem `executor: copilot`, o subagent spawned pelo PM executa:
 
 ```bash
-node ~/.claude/plugins/copilot-plugin-cc/plugins/copilot/scripts/copilot-companion.mjs \
+node ~/.claude/plugins/ai-dev-copilot/plugins/copilot/scripts/copilot-companion.mjs \
   task \
   --write \
   --model gpt-5.4 \

@@ -37,7 +37,7 @@
 2. Builds a prompt with: objective, relevant file contents, outputs expected, acceptance criteria
 3. Calls the Copilot companion script:
    ```bash
-   node ~/.claude/plugins/copilot-plugin-cc/plugins/copilot/scripts/copilot-companion.mjs \
+   node ~/.claude/plugins/ai-dev-copilot/plugins/copilot/scripts/copilot-companion.mjs \
      task --write [prompt]
    ```
 4. For complex tasks, delegates via `/copilot:rescue` (Copilot runs as a subagent)

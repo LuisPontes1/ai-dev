@@ -1,0 +1,8 @@
+{
+  "name": "copilot",
+  "version": "2.0.0",
+  "description": "Copilot integration for ai-dev — review code and delegate tasks via GitHub Copilot SDK.",
+  "author": {
+    "name": "ai-dev"
+  }
+}

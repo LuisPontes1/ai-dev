@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GLOBAL_CLAUDE="$HOME/CLAUDE.md"
 CLAUDE_COMMANDS_DIR="$HOME/.claude/commands"
 CLAUDE_AIDEV_DIR="$HOME/.claude/ai-dev"
-COPILOT_PLUGIN_DIR="$HOME/.claude/plugins/copilot-plugin-cc"
+COPILOT_PLUGIN_DIR="$HOME/.claude/plugins/ai-dev-copilot"
 MARKER_START="<!-- ai-dev:start -->"
 MARKER_END="<!-- ai-dev:end -->"
 DRY_RUN=false
@@ -153,42 +153,79 @@ install_templates() {
   fi
 }
 
-# ── 5. Check Copilot plugin ──────────────────────────────────────────────────
-check_copilot_plugin() {
-  echo ""
-  if [[ -d "$COPILOT_PLUGIN_DIR" ]]; then
-    local companion="$COPILOT_PLUGIN_DIR/plugins/copilot/scripts/copilot-companion.mjs"
-    if [[ -f "$companion" ]]; then
-      success "Copilot plugin found: $COPILOT_PLUGIN_DIR"
+# ── 6. Copilot plugin → ~/.claude/plugins/ai-dev-copilot/ ───────────────────
+install_copilot_plugin() {
+  local src_dir="$SCRIPT_DIR/plugins/copilot"
+  [[ ! -d "$src_dir" ]] && { warn "No plugins/copilot/ directory — skipping"; return; }
+
+  info "Installing Copilot plugin to $COPILOT_PLUGIN_DIR"
+
+  if $DRY_RUN; then
+    warn "  Would copy plugin to: $COPILOT_PLUGIN_DIR"
+    warn "  Would run: npm install"
+    warn "  Would install slash commands to: ~/.claude/commands/copilot/"
+    return
+  fi
+
+  # Copy plugin files
+  mkdir -p "$COPILOT_PLUGIN_DIR/plugins/copilot"
+  cp -r "$src_dir"/. "$COPILOT_PLUGIN_DIR/plugins/copilot/"
+
+  # Copy root package.json to plugin root (for npm install)
+  cp "$src_dir/package.json" "$COPILOT_PLUGIN_DIR/package.json"
+
+  # Install npm dependencies
+  if command -v node &>/dev/null; then
+    if command -v npm &>/dev/null; then
+      info "  Running npm install..."
+      (cd "$COPILOT_PLUGIN_DIR" && npm install --production 2>&1) | while read -r line; do
+        info "    $line"
+      done
+      success "  npm install complete"
     else
-      warn "Plugin directory exists but copilot-companion.mjs not found."
-      warn "The plugin may be incomplete. Re-install or check: $COPILOT_PLUGIN_DIR"
+      warn "  npm not found — run 'npm install' manually in $COPILOT_PLUGIN_DIR"
     fi
   else
-    warn "Copilot plugin (copilot-plugin-cc) NOT found at ~/.claude/plugins/"
-    warn "Tasks with 'executor: copilot' will not work without it."
-    warn "See docs/copilot-plugin.md for installation instructions."
+    warn "  Node.js not found — Copilot plugin requires Node.js >= 18.18"
+    warn "  Install Node.js and run: cd $COPILOT_PLUGIN_DIR && npm install"
   fi
+
+  # Install copilot slash commands
+  local cmd_dir="$COPILOT_PLUGIN_DIR/plugins/copilot/commands"
+  local dest_cmd_dir="$HOME/.claude/commands/copilot"
+  if [[ -d "$cmd_dir" ]]; then
+    mkdir -p "$dest_cmd_dir"
+    for cmd_file in "$cmd_dir"/*.md; do
+      [[ -f "$cmd_file" ]] || continue
+      cp "$cmd_file" "$dest_cmd_dir/$(basename "$cmd_file")"
+    done
+    success "  Installed copilot slash commands (/copilot:setup, /copilot:review, ...)"
+  fi
+
+  success "Copilot plugin installed"
 }
 
-# ── 5. Summary ───────────────────────────────────────────────────────────────
+# ── 7. Summary ───────────────────────────────────────────────────────────────
 print_summary() {
   echo ""
   echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   echo -e "${GREEN}  AI-Dev installed${NC}"
   echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
   echo ""
-  echo "  ~/CLAUDE.md                    — global PM instructions (core)"
-  echo "  ~/.claude/ai-dev/enabled       — toggle flag (ai-dev is ON)"
-  echo "  ~/.claude/ai-dev/              — on-demand protocol files + templates"
-  echo "  ~/.claude/ai-dev/templates/    — starters, task/agent/report templates"
-  echo "  ~/.claude/commands/            — slash commands (/ai-dev-init, /ai-dev-on, /ai-dev-off)"
+  echo "  ~/CLAUDE.md                          — global PM instructions (core)"
+  echo "  ~/.claude/ai-dev/enabled             — toggle flag (ai-dev is ON)"
+  echo "  ~/.claude/ai-dev/                    — on-demand protocol files + templates"
+  echo "  ~/.claude/ai-dev/templates/          — starters, task/agent/report templates"
+  echo "  ~/.claude/commands/                  — /ai-dev-init, /ai-dev-on, /ai-dev-off"
+  echo "  ~/.claude/plugins/ai-dev-copilot/    — Copilot plugin + SDK"
+  echo "  ~/.claude/commands/copilot/          — /copilot:setup, /copilot:review, ..."
   echo ""
   echo "  Next steps:"
-  echo "    1. Open any repo in VS Code with Claude Code"
-  echo "    2. Claude detects no .ai-dev/ and prompts /ai-dev-init"
-  echo "    3. Review .ai-dev/context.md, describe what you want to build"
-  echo "    4. Approve the plan — execution begins"
+  echo "    1. Run /copilot:setup to verify Copilot is working"
+  echo "    2. Open any repo in VS Code with Claude Code"
+  echo "    3. Claude detects no .ai-dev/ and prompts /ai-dev-init"
+  echo "    4. Review .ai-dev/context.md, describe what you want to build"
+  echo "    5. Approve the plan — execution begins"
   echo ""
   echo "  Docs: $SCRIPT_DIR/docs/"
   echo ""
@@ -200,5 +237,5 @@ install_protocol_files
 install_enable_flag
 install_templates
 install_commands
-check_copilot_plugin
+install_copilot_plugin
 print_summary

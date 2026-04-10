@@ -25,7 +25,7 @@ Use `--dry-run` to preview what will be created without writing anything.
 ~/.claude/commands/ai-dev-*.md   ← /ai-dev-init, /ai-dev-on, /ai-dev-off
 ```
 
-The installer also checks for the Copilot plugin (`copilot-plugin-cc`) and warns if it's not installed — tasks with `executor: copilot` won't work without it.
+The installer includes the Copilot plugin (`@github/copilot-sdk`) — it copies the plugin, runs `npm install`, and installs the `/copilot:*` slash commands automatically.
 
 **Verify:**
 ```bash
