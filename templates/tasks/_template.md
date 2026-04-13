@@ -74,6 +74,12 @@ Updated: YYYY-MM-DD
        low    → mudanças simples, boilerplate
        minimal→ geração mecânica, sem raciocínio necessário -->
 
+- **Persona:** `none`
+  <!-- Opcional. Ativa um prompt de especialista que é injetado no contexto do subagent.
+       Valores: none | security | performance | architecture | tdd | database | frontend | devops
+       O PM seleciona durante o planejamento com base no domínio da task.
+       Template carregado de ~/.claude/ai-dev/personas/<persona>.md -->
+
 - **Session ID:** *(preenchido ao iniciar)*
 
 ---

@@ -19,8 +19,9 @@ Use `--dry-run` to preview what will be created without writing anything.
 ```
 ~/CLAUDE.md                      ← PM core instructions (~80 lines)
 ~/.claude/ai-dev/enabled         ← toggle flag (system is ON)
-~/.claude/ai-dev/planning.md     ← on-demand: atomicity, types, models
-~/.claude/ai-dev/execution.md    ← on-demand: rollback, preflight, copilot, credentials
+~/.claude/ai-dev/planning.md     ← on-demand: atomicity, types, models, personas
+~/.claude/ai-dev/execution.md    ← on-demand: rollback, preflight, copilot, parallel, credentials
+~/.claude/ai-dev/personas/       ← 8 specialist prompt templates
 ~/.claude/ai-dev/templates/      ← starters, task/report/agent templates
 ~/.claude/commands/ai-dev-*.md   ← /ai-dev-init, /ai-dev-on, /ai-dev-off
 ```
@@ -30,7 +31,7 @@ The installer includes the Copilot plugin (`@github/copilot-sdk`) — it copies 
 **Verify:**
 ```bash
 ls ~/.claude/ai-dev/
-# enabled  execution.md  planning.md  templates/
+# enabled  execution.md  personas/  planning.md  templates/
 ```
 
 ---
@@ -111,21 +112,22 @@ task-001  preflight       Verify PyJWT installed and SECRET_KEY in env
                           claude-code · sonnet
 
 task-002  implementation  Create User model with password hashing
-                          claude-code · sonnet
+                          claude-code · sonnet · persona: database
 
 task-003  implementation  Create POST /auth/login endpoint
-                          claude-code · sonnet  (depends on 002)
+                          claude-code · sonnet · persona: security  (depends on 002)
 
 task-004  implementation  Create JWT middleware and @require_auth decorator
-                          copilot · gpt-5.4·high  (depends on 003)
+                          copilot · gpt-5.4·high · persona: security  (depends on 003)
 
 task-005  implementation  Protect /users and /orders routes
                           copilot · gpt-5.4·medium  (depends on 004)
 
 task-006  verification    Run pytest and verify coverage
-                          claude-code · sonnet  (depends on 005)
+                          claude-code · sonnet · persona: tdd  (depends on 005)
 
 Sequence: 001 → 002 → 003 → 004 → 005 → 006
+Parallel groups: none (linear chain)
 
 Want to adjust any task, change an executor or model, before approving?
 ```
@@ -187,6 +189,32 @@ Proceed?
 
 You can also execute a specific task: `/ai-dev-exec task-003`
 
+### Parallel execution
+
+When multiple tasks are ready and have no dependency between them, the PM offers to run them in parallel:
+
+```
+You: /ai-dev-exec
+```
+
+```
+Parallel batch detected — 3 tasks can run simultaneously:
+
+  🅰 task-007 — Write API docs          (claude-code · haiku · worktree)
+  🅱 task-008 — Build settings page      (copilot · gpt-5.4 · background)
+  🅲 task-009 — Add rate limiting        (claude-code · sonnet · worktree)
+
+Output overlap check: ✅ no conflicts
+
+Run all in parallel? [or pick specific tasks, or run sequentially]
+```
+
+```
+You: go parallel
+```
+
+Each claude-code task runs in an isolated worktree, copilot tasks run as background jobs. After all complete, worktrees are merged and results reported together.
+
 After implementation tasks, review with `/ai-dev-review`:
 
 ```
@@ -223,14 +251,17 @@ Nothing proceeds without your decision.
 
 | Command / what you say | What happens |
 |------------------------|--------------|
-| `/ai-dev-exec` | Execute the next ready task (auto-detects executor) |
+| `/ai-dev-exec` | Execute the next ready task (offers parallel if multiple ready) |
 | `/ai-dev-exec task-003` | Execute a specific task |
+| `/ai-dev-exec --parallel` | Run all parallel-safe ready tasks simultaneously |
+| `/ai-dev-exec --parallel-max 6` | Parallel batch with custom max size |
 | `/ai-dev-review` | Copilot review of the last completed task |
 | `/ai-dev-review --adversarial` | Adversarial review (questions design decisions) |
 | "project status" | PM shows full dashboard |
 | "pause here" | PM stops, waits for you |
 | "skip to task-004" | PM checks dependencies, warns if blocked |
 | "task-003 goes to copilot gpt-5.4 xhigh" | PM updates the task file |
+| "add persona security to task-003" | PM sets specialist lens for the task |
 | "add a task for API documentation" | PM creates task, updates plan and dependencies |
 | "what did task-002 change?" | PM reads and summarizes the delivery report |
 

@@ -39,10 +39,24 @@ task-001
 1. A task can only start when **all** tasks in its `Requer` column have status `done`
 2. Circular dependencies are not allowed — Claude Code will refuse to start if detected
 3. When a task completes, Claude Code will identify and report which tasks are newly unblocked
-4. To run tasks in parallel: both must have no dependency on each other AND user must explicitly authorize it
+4. Tasks with no dependency between them form a **parallel-safe group** when:
+   - Their `## Outputs esperados` do not overlap
+   - None is type `deployment` or `manual`
+5. `/ai-dev-exec` auto-detects parallel-safe groups and offers batch execution
+6. Max batch size: 4 tasks (override with `--parallel-max N`, up to 6)
+
+---
+
+## Parallel groups
+
+<!-- Auto-filled by PM when planning. Shows which tasks can run together. -->
+
+| Group | Tasks | Reason |
+|-------|-------|--------|
+| — | — | — |
 
 ---
 
 ## Notes
 
-[Optional: reasoning behind specific ordering decisions, known bottlenecks, etc.]
+[Optional: reasoning behind specific ordering decisions, known bottlenecks, parallel group rationale, etc.]

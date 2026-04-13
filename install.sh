@@ -94,9 +94,17 @@ install_protocol_files() {
       cp "$src_dir/$f" "$CLAUDE_AIDEV_DIR/$f"
       success "  Installed: ~/.claude/ai-dev/$f"
     done
+
+    # Install personas
+    if [[ -d "$src_dir/personas" ]]; then
+      mkdir -p "$CLAUDE_AIDEV_DIR/personas"
+      cp "$src_dir/personas"/*.md "$CLAUDE_AIDEV_DIR/personas/" 2>/dev/null || true
+      success "  Installed: ~/.claude/ai-dev/personas/ ($(ls "$src_dir/personas"/*.md 2>/dev/null | wc -l | tr -d ' ') personas)"
+    fi
   else
     warn "  Would install: ~/.claude/ai-dev/planning.md"
     warn "  Would install: ~/.claude/ai-dev/execution.md"
+    warn "  Would install: ~/.claude/ai-dev/personas/"
   fi
 }
 
@@ -215,6 +223,7 @@ print_summary() {
   echo "  ~/CLAUDE.md                          — global PM instructions (core)"
   echo "  ~/.claude/ai-dev/enabled             — toggle flag (ai-dev is ON)"
   echo "  ~/.claude/ai-dev/                    — on-demand protocol files + templates"
+  echo "  ~/.claude/ai-dev/personas/           — specialist prompt templates (8 personas)"
   echo "  ~/.claude/ai-dev/templates/          — starters, task/agent/report templates"
   echo "  ~/.claude/commands/                  — /ai-dev-init, /ai-dev-on, /ai-dev-off"
   echo "  ~/.claude/plugins/ai-dev-copilot/    — Copilot plugin + SDK"

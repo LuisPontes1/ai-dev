@@ -92,10 +92,11 @@ A common problem with large system prompts is that the model "forgets" rules bur
 
 | File | Sections | Loaded when |
 |------|----------|-------------|
-| `~/.claude/ai-dev/planning.md` | Atomicity rules, task types, model cascade | PM creates or reviews tasks |
+| `~/.claude/ai-dev/planning.md` | Atomicity rules, task types, model cascade, personas | PM creates or reviews tasks |
 | `~/.claude/ai-dev/execution.md` | Pre-flight | Next task is `deployment` |
 | | Rollback | Subagent fails |
 | | Copilot | Task executor is `copilot` |
+| | Parallel execution | 2+ tasks ready with no dependencies between them |
 | | Feedback | Delivery report has plan impact |
 | | Changelog | Plan changes post-approval |
 | | Credentials | Task needs external access |
@@ -131,8 +132,9 @@ The PM reads `~/.claude/ai-dev/planning.md` and works with you to design the pla
    - Independent verification (testable alone)
    - Single session (fits one subagent run)
    - Safe failure (repo stays valid if it breaks mid-way)
-3. Assigns **executor** (`claude-code`, `copilot`, `manual`) and **model/effort** per task
-4. Sequences tasks respecting dependencies
+3. Assigns **executor** (`claude-code`, `copilot`, `manual`), **model/effort**, and optional **persona** per task
+4. Identifies **parallel groups** — tasks with no dependencies that can run simultaneously
+5. Sequences tasks respecting dependencies
 5. Adds `preflight` tasks before any `deployment`
 6. Iterates until you explicitly approve
 
@@ -141,8 +143,9 @@ The PM reads `~/.claude/ai-dev/planning.md` and works with you to design the pla
 Use `/ai-dev-exec` to execute tasks. It reads the task file, detects the executor, and dispatches:
 
 ```
-/ai-dev-exec              → picks next ready task
+/ai-dev-exec              → picks next ready task (offers parallel if multiple ready)
 /ai-dev-exec task-003     → executes specific task
+/ai-dev-exec --parallel   → run all parallel-safe ready tasks simultaneously
 ```
 
 For each task:
@@ -215,6 +218,59 @@ PM reports what happened → waits for your decision
 **Sequencing rules:**
 - `preflight` always before `deployment` (mandatory — PM creates one if missing)
 - `discovery` before `implementation` when scope depends on environment state
+
+---
+
+## Parallel execution
+
+When multiple tasks are ready (all dependencies met) and have no output overlap, the PM can dispatch them simultaneously:
+
+```
+/ai-dev-exec --parallel
+```
+
+```
+Parallel batch detected — 3 tasks can run simultaneously:
+
+  🅰 task-002 — Create API endpoints        (claude-code · sonnet · worktree)
+  🅱 task-003 — Build React components       (copilot · gpt-5.4 · background)
+  🅲 task-004 — Write migration scripts      (claude-code · haiku · worktree)
+
+Output overlap check: ✅ no conflicts
+```
+
+**How it works:**
+- `claude-code` tasks run in **isolated git worktrees** via the Agent tool (`isolation: "worktree"`, `run_in_background: true`). Each subagent works on a separate copy of the repo — no file conflicts.
+- `copilot` tasks run as **background jobs** via the companion script with `--background`.
+- After all tasks complete, worktree branches are merged sequentially.
+- If any task fails, the batch stops — no merging until the failure is resolved.
+
+**Safety rules:**
+- Max 4 tasks per batch (configurable to 6 with `--parallel-max`)
+- `deployment` and `manual` tasks never run in parallel
+- Output overlap is checked before dispatch — shared files block parallelization
+- User must confirm the batch before execution starts
+
+---
+
+## Personas
+
+Optional specialist lens injected into the subagent prompt. Set during planning via the `Persona:` field in the task file.
+
+| Persona | Focus |
+|---------|-------|
+| `security` | OWASP, input validation, secrets, least privilege |
+| `performance` | Complexity, I/O, caching, memory, profiling |
+| `architecture` | Consistency, coupling, separation of concerns, API design |
+| `tdd` | Red-green-refactor cycle, coverage, edge cases |
+| `database` | Schema design, migrations, indexes, transactions |
+| `frontend` | Accessibility, responsiveness, state management, UX |
+| `devops` | IaC, idempotency, rollback, observability, blast radius |
+| `data-engineering` | Data quality, idempotency, partitioning, lineage, cost |
+
+**How it works:** The PM reads the persona template from `~/.claude/ai-dev/personas/<persona>.md` and appends it to the subagent prompt file. The persona adds a specialist "lens" — it doesn't replace the task objective, it enriches it. Each persona also instructs the subagent to add a specialist notes section to the delivery report.
+
+**Rules:** one persona per task. If a task spans two domains, split it.
 
 ---
 

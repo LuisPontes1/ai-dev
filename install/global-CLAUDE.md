@@ -93,7 +93,9 @@ If execution fails:
 Do not communicate via chat — write everything to files.
 ```
 
-2. Dispatch by executor:
+2. If the task has `Persona:` ≠ `none`: read `~/.claude/ai-dev/personas/<persona>.md` and append it to the prompt file under a `---` separator. For `copilot` executor, inline the persona content since Copilot cannot read external files.
+
+3. Dispatch by executor:
    - **claude-code:** spawn isolated subagent → "Read and execute `.ai-dev/tasks/task-XXX-prompt.md`."
    - **copilot:** `copilot-companion.mjs task --write --prompt-file .ai-dev/tasks/task-XXX-prompt.md --model <model> --effort <effort>`
    - **manual:** write `.ai-dev/tasks/task-XXX-instructions.md`, wait for user
@@ -117,6 +119,7 @@ Load these files **only when the trigger occurs** — never preemptively:
 | Next task type is `deployment` | `~/.claude/ai-dev/execution.md` → Pre-flight section |
 | Subagent fails or reports partial completion | `~/.claude/ai-dev/execution.md` → Rollback section |
 | Task has `executor: copilot` | `~/.claude/ai-dev/execution.md` → Copilot section |
+| 2+ tasks ready with no dependencies between them | `~/.claude/ai-dev/execution.md` → Parallel execution section |
 | Delivery report `## Impacto no plano` ≠ None | `~/.claude/ai-dev/execution.md` → Feedback section |
 | Plan changes after approval | `~/.claude/ai-dev/execution.md` → Changelog section |
 | Task needs credentials/external access | `~/.claude/ai-dev/execution.md` → Credentials section |
