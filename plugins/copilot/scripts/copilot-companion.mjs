@@ -19,7 +19,7 @@ import {
     parseStructuredOutput
   } from "./lib/copilot-client.mjs";
 import { readStdinIfPiped } from "./lib/fs.mjs";
-import { collectReviewContext, ensureGitRepository, resolveReviewTarget } from "./lib/git.mjs";
+import { collectReviewContext, ensureGitRepository, getWorkingTreeState, resolveReviewTarget } from "./lib/git.mjs";
 import { binaryAvailable, terminateProcessTree } from "./lib/process.mjs";
 import { loadPromptTemplate, interpolateTemplate } from "./lib/prompts.mjs";
 import {
@@ -426,14 +426,56 @@ async function executeTaskRun(request) {
   });
 
   const promptText = request.prompt || DEFAULT_CONTINUE_PROMPT;
+
+  // Snapshot file mtimes before execution to detect all changes (new + edited)
+  const preMtimes = new Map();
+  try {
+    const preState = getWorkingTreeState(workspaceRoot);
+    for (const f of [...preState.staged, ...preState.unstaged, ...preState.untracked]) {
+      try { preMtimes.set(f, fs.statSync(path.join(workspaceRoot, f)).mtimeMs); } catch { /* file may not be readable */ }
+    }
+  } catch { /* not a git repo */ }
+
   const result = await runPrompt(session, promptText, { onProgress: request.onProgress });
   const rawOutput = result.content ?? "";
-  const failureMessage = "";
+  const completedTools = (result.toolCalls ?? []).filter(t => t.status === "completed");
+  const hasToolWork = completedTools.length > 0;
+  const succeeded = Boolean(rawOutput) || hasToolWork;
+  const failureMessage = succeeded ? "" : "Copilot did not return a final message.";
+
+  // Detect touched files from three sources:
+  // 1. SDK session.info events (file_created / file_edited) — most reliable
+  // 2. Git working tree mtime comparison — catches anything the events miss
+  const touchedSet = new Set();
+
+  // Source 1: SDK file events (absolute paths → make relative to workspace)
+  for (const fe of result.fileEvents ?? []) {
+    if (fe.path) {
+      const rel = path.isAbsolute(fe.path) ? path.relative(workspaceRoot, fe.path) : fe.path;
+      if (rel && !rel.startsWith("..")) touchedSet.add(rel);
+    }
+  }
+
+  // Source 2: Git mtime diff
+  try {
+    const postState = getWorkingTreeState(workspaceRoot);
+    const allPostFiles = [...postState.staged, ...postState.unstaged, ...postState.untracked];
+    for (const f of allPostFiles) {
+      const preMtime = preMtimes.get(f);
+      if (preMtime === undefined) { touchedSet.add(f); continue; }
+      try {
+        if (fs.statSync(path.join(workspaceRoot, f)).mtimeMs !== preMtime) touchedSet.add(f);
+      } catch { touchedSet.add(f); }
+    }
+  } catch { /* git detection failed after run */ }
+
+  const touchedFiles = [...touchedSet];
 
   const rendered = renderTaskResult(
     {
       rawOutput,
       failureMessage,
+      toolsExecuted: hasToolWork,
       reasoningSummary: result.reasoning ? [result.reasoning] : []
     },
     {
@@ -443,15 +485,16 @@ async function executeTaskRun(request) {
     }
   );
   const payload = {
-    status: rawOutput ? 0 : 1,
+    status: succeeded ? 0 : 1,
     sessionId: result.sessionId ?? sessionId,
     rawOutput,
-    touchedFiles: [],
+    touchedFiles,
+    toolCalls: result.toolCalls ?? [],
     reasoningSummary: result.reasoning ? [result.reasoning] : []
   };
 
   return {
-    exitStatus: rawOutput ? 0 : 1,
+    exitStatus: succeeded ? 0 : 1,
     sessionId: result.sessionId ?? sessionId,
     payload,
     rendered,

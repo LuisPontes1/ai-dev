@@ -318,6 +318,10 @@ export function renderTaskResult(parsedResult, meta) {
     return rawOutput.endsWith("\n") ? rawOutput : `${rawOutput}\n`;
   }
 
+  if (parsedResult?.toolsExecuted) {
+    return "Task completed via tool execution.\n";
+  }
+
   const message = String(parsedResult?.failureMessage ?? "").trim() || "Copilot did not return a final message.";
   return `${message}\n`;
 }

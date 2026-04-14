@@ -54,6 +54,8 @@ export async function runPrompt(session, prompt, options = {}) {
   const { onProgress } = options;
   const chunks = [];
   const reasoning = [];
+  const toolCalls = [];
+  const fileEvents = [];
 
   const unsubscribe = session.on((event) => {
     const eventType = event.type;
@@ -72,6 +74,12 @@ export async function runPrompt(session, prompt, options = {}) {
         reasoning.push(event.data.content || "");
         break;
       case "tool.execution_start":
+        toolCalls.push({
+          id: event.data.toolCallId,
+          name: event.data.toolName,
+          arguments: event.data.arguments ?? null,
+          status: "running"
+        });
         onProgress?.({
           message: `Running tool: ${event.data.toolName}.`,
           phase: "investigating",
@@ -82,15 +90,23 @@ export async function runPrompt(session, prompt, options = {}) {
         break;
       case "tool.execution_complete": {
         const status = event.data.success ? "completed" : "failed";
+        const tracked = toolCalls.find(t => t.id === event.data.toolCallId);
+        if (tracked) tracked.status = status;
+        const toolName = tracked?.name ?? "unknown";
         onProgress?.({
-          message: `Tool ${event.data.toolName} ${status}.`,
+          message: `Tool ${toolName} ${status}.`,
           phase: "running",
-          stderrMessage: `Tool ${event.data.toolName} ${status}`,
+          stderrMessage: `Tool ${toolName} ${status}`,
           logTitle: null,
           logBody: null
         });
         break;
       }
+      case "session.info":
+        if (event.data.infoType === "file_created" || event.data.infoType === "file_edited") {
+          fileEvents.push({ type: event.data.infoType, path: event.data.message });
+        }
+        break;
       case "session.idle":
         onProgress?.({
           message: "Turn completed.",
@@ -112,13 +128,17 @@ export async function runPrompt(session, prompt, options = {}) {
     return {
       content,
       reasoning: reasoning.join(""),
-      sessionId: session.sessionId ?? null
+      sessionId: session.sessionId ?? null,
+      toolCalls,
+      fileEvents
     };
   } catch (error) {
     return {
       content: chunks.join(""),
       reasoning: reasoning.join(""),
       sessionId: session.sessionId ?? null,
+      toolCalls,
+      fileEvents,
       error
     };
   } finally {
