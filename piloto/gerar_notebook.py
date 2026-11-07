@@ -24,10 +24,11 @@ Tudo é salvo em `Meu Drive/cortes-culto/<nome-do-culto>/`.
 
 ### Antes de rodar
 - **GPU:** menu *Ambiente de execução → Alterar tipo → GPU T4*.
-- **Chave da API:** ícone de 🔑 (*Secrets*) na barra lateral → adicionar `ANTHROPIC_API_KEY` e liberar o acesso do notebook.
 - Ajuste a célula **Configuração** e rode tudo (*Ambiente de execução → Executar tudo*).
 
-Custo estimado por culto de ~2h: **< US$ 0,50** de API. O Colab é grátis.
+**Dois modos:**
+- `MODO = "chat"` (padrão, sem custo de API): o notebook transcreve e para. Você pede ao Claude no chat para ler a transcrição no Drive e gravar `analise_cortes.json`; depois roda de novo e ele renderiza.
+- `MODO = "api"`: tudo automático. Precisa da chave em 🔑 *Secrets* → `ANTHROPIC_API_KEY`. Custo estimado: **< US$ 0,50** por culto de ~2h.
 """)
 
 md("## 1. Configuração")
@@ -46,6 +47,13 @@ GLOSSARIO = {
 }
 
 MODELO_WHISPER = "large-v3"
+
+# Modo do piloto:
+#   "chat" → sem API: o notebook para depois da transcrição; você pede ao Claude (no chat) para ler
+#            a transcrição no Drive e gravar `analise_cortes.json` na pasta do culto; aí roda de novo para renderizar.
+#   "api"  → tudo automático pela Claude API (precisa da ANTHROPIC_API_KEY nos Secrets).
+MODO = "chat"
+REVISAR_COM_HAIKU = False      # só no modo "api"
 MODELO_REVISAO = "claude-haiku-5-5"
 MODELO_CORTES  = "claude-opus-5-5"
 
@@ -64,14 +72,15 @@ EM_COLAB = "google.colab" in sys.modules
 if EM_COLAB:
     from google.colab import drive, userdata
     drive.mount("/content/drive")
-    os.environ["ANTHROPIC_API_KEY"] = userdata.get("ANTHROPIC_API_KEY")
+    if MODO == "api":
+        os.environ["ANTHROPIC_API_KEY"] = userdata.get("ANTHROPIC_API_KEY")
     RAIZ_DRIVE = Path("/content/drive/MyDrive")
     TRABALHO = Path("/content/trabalho")
 else:  # execução local (testes)
     RAIZ_DRIVE = Path(os.environ.get("RAIZ_DRIVE", "."))
     TRABALHO = Path(os.environ.get("TRABALHO", "./trabalho"))
 
-pkgs = ["faster-whisper", "anthropic>=0.70", "pydantic"]
+pkgs = ["faster-whisper", "pydantic"] + (["anthropic>=0.70"] if MODO == "api" else [])
 if USAR_SEPARACAO_MUSICA:
     pkgs.append("inaSpeechSegmenter")
 subprocess.run([sys.executable, "-m", "pip", "install", "-q", *pkgs], check=False)
@@ -209,13 +218,15 @@ def limpar(segs):
 segmentos = limpar(segmentos)
 ''')
 
-md("## 7. Revisão da transcrição (Claude Haiku)\nCorrige nomes, referências bíblicas e pontuação **segmento a segmento**, mantendo os mesmos IDs — os tempos continuam valendo.")
+md("## 7. Revisão da transcrição (Claude Haiku — opcional)\nSó roda com `MODO = \"api\"` e `REVISAR_COM_HAIKU = True`. Corrige nomes, referências bíblicas e pontuação **segmento a segmento**, mantendo os mesmos IDs — os tempos continuam valendo.")
 code(r'''
-import anthropic
 from pydantic import BaseModel
 from concurrent.futures import ThreadPoolExecutor
 
-cliente = anthropic.Anthropic()
+cliente = None
+if MODO == "api":
+    import anthropic
+    cliente = anthropic.Anthropic()
 USO = {}   # modelo -> [tokens_entrada, tokens_saida]
 PRECO = {"claude-haiku-5-5": (0.10, 0.50), "claude-opus-5-5": (4.00, 20.00), "claude-sonnet-5-5": (2.00, 10.00)}
 
@@ -274,6 +285,11 @@ TRANSCRICAO_REVISADA = SAIDA / "transcricao_revisada.json"
 if TRANSCRICAO_REVISADA.exists():
     segmentos = json.loads(TRANSCRICAO_REVISADA.read_text())
     print("Usando revisão já salva")
+elif not (MODO == "api" and REVISAR_COM_HAIKU):
+    for s in segmentos:
+        s.setdefault("texto_original", s["texto"]); s.setdefault("incerto", False)
+    print("Revisão com Haiku desligada — seguindo com a transcrição limpa")
+    TRANSCRICAO_REVISADA.write_text(json.dumps(segmentos, ensure_ascii=False))
 else:
     TAM = 120
     blocos = [segmentos[i:i + TAM] for i in range(0, len(segmentos), TAM)]
@@ -306,8 +322,17 @@ def escreve_srt(segs, caminho, deslocamento=0.0):
 
 escreve_srt(segmentos, SAIDA / "transcricao_revisada.srt")
 (SAIDA / "transcricao_revisada.txt").write_text(
-    "\n".join(f"[{hms(s['inicio'])}]{' ♪' if s['musica'] else ''} {s['texto']}" for s in segmentos))
-print("Salvo em", SAIDA)
+    "\n".join(f"[{s['id']}|{hms(s['inicio'])}]{' ♪' if s['musica'] else ''} {s['texto']}" for s in segmentos))
+# partes de ~60 KB (o conector do Drive pode truncar arquivos de texto grandes)
+linhas, parte, tam, n = [], [], 0, 0
+for s in segmentos:
+    l = f"[{s['id']}|{hms(s['inicio'])}]{' ♪' if s['musica'] else ''} {s['texto']}\n"
+    parte.append(l); tam += len(l.encode())
+    if tam > 60_000:
+        n += 1; (SAIDA / f"transcricao_parte_{n}.txt").write_text("".join(parte)); parte, tam = [], 0
+if parte:
+    n += 1; (SAIDA / f"transcricao_parte_{n}.txt").write_text("".join(parte))
+print("Salvo em", SAIDA, f"({n} parte(s) para o chat)")
 ''')
 
 md("## 8. Mapa do culto e sugestões de cortes (Claude Opus)")
@@ -364,7 +389,12 @@ def linhas_para_claude(segs):
 ANALISE = SAIDA / "analise_cortes.json"
 if ANALISE.exists():
     analise = Analise.model_validate_json(ANALISE.read_text())
-    print("Usando análise já salva")
+    print("Usando análise salva em", ANALISE.name)
+elif MODO == "chat":
+    raise SystemExit(
+        f"✅ Transcrição pronta em {SAIDA / 'transcricao_revisada.txt'}\n\n"
+        f"Agora peça ao Claude no chat: “lê a transcrição de '{STEM}' no Drive e grava o analise_cortes.json”.\n"
+        "Quando ele terminar, rode o notebook de novo (Executar tudo) — ele pula o que já foi feito e renderiza os cortes.")
 else:
     contexto = f"Contexto da igreja: {json.dumps(GLOSSARIO, ensure_ascii=False)}\n\n" if any(GLOSSARIO.values()) else ""
     resp = cliente.messages.parse(
