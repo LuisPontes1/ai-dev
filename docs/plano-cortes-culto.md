@@ -170,6 +170,7 @@ Para cada corte: início/fim, tipo, título sugerido, gancho (primeira frase), t
 | Fase | Entrega | Critério de pronto |
 |---|---|---|
 | **0. Plano** | Este documento | Decisões em aberto respondidas |
+| **1a. Piloto no Colab** | `piloto/piloto_cortes_colab.ipynb` (também em `Meu Drive/cortes-culto/`) — Drive montado, Whisper na T4, Haiku + Opus, prévias renderizadas | Rodar no culto de 01/11 e avaliar os cortes |
 | **1. Transcrição + sugestão** | Scripts: extrair áudio → segmentar → Whisper → revisão Haiku → mapa + sugestões | Em 1 culto real, você acha ≥ 3 cortes sugeridos "publicáveis" |
 | **2. Render** | Corte longo + short vertical com legenda | Vídeos prontos para subir sem edição manual |
 | **3. YouTube** | Upload + coleta de métricas | Relatório semanal do canal |
