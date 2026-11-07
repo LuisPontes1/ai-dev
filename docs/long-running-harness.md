@@ -27,8 +27,8 @@ None of these is fixed by a better prompt. They are fixed by **structure**: file
 └──────────────────────┘    │   progress.md                │    └─────┬─────┘   └─────┬─────┘   └─────┬─────┘
                             │   init.sh                    │          │ audit        │ audit        │ audit
                             │   capabilities.md  (MCP, skills)        ▼              ▼              ▼
-                            │ .ai-dev/knowledge/           │◀───── PM: aidev guard · doctor · commit · progress
-                            │   map.md · decisions · gotchas
+                            │ .ai-dev/context.md           │◀───── PM: aidev guard · doctor · commit · progress
+                            │   map · decisions · gotchas  │
                             │ git history                  │
                             └──────────────────────────────┘
 ```
@@ -110,16 +110,17 @@ The six steps: bearings → solid ground → one feature → implement and verif
 
 Which MCP servers are installed, which skills to load, and the **verification ladder** per `verify` value (browser → Playwright MCP → Playwright script; api → real HTTP against the running app; …).
 
-### `.ai-dev/knowledge/` — the knowledge map
+### Project knowledge — the existing `.ai-dev/`
 
-| File | Written by | Purpose |
-|------|-----------|---------|
-| `map.generated.md` | `aidev map` | inventory: modules, sizes, languages, entrypoints, commands |
-| `map.md` | agents | architecture, module table linked to feature ids, where-to-look, invariants, data model |
-| `decisions.md` | agents | ADR log — decisions a later session could undo by accident |
-| `gotchas.md` | agents | symptom → cause → fix |
+| Where | Written by | Purpose |
+|-------|-----------|---------|
+| `discovery/inventory.md` | `aidev map` | inventory: modules, sizes, languages, entrypoints, commands |
+| `context.md → Estrutura do repositório` | agents | code map: tree + "Onde procurar" |
+| `context.md → Decisões de arquitetura` | `aidev learn decision` | decisions a later session could undo by accident |
+| `context.md → Invariantes` · `Gotchas` · `Aprendizados` | agents, `aidev learn` | what breaks things, symptom → fix, lessons |
 
-`aidev map --check` compares `map.md` against the real tree: stale paths (mentioned but gone) and uncovered modules (exist but never mentioned). The PM runs it in every audit and schedules a refresh session when the map drifts.
+All of it — plus the ai-dev general knowledge — is injected into every session by the SessionStart hook
+(see [knowledge-and-skills.md](knowledge-and-skills.md)). `aidev map --check` compares `context.md` against the real tree: stale paths (mentioned but gone) and uncovered modules (exist but never mentioned). The PM runs it in every audit and schedules a refresh session when the map drifts.
 
 ---
 
@@ -153,7 +154,7 @@ Installed to `~/.claude/skills/`, loaded by sessions on demand:
 | `ai-dev-long-run-session` | every coding session — the six moves, context budgeting, hard rules, how to write the note |
 | `ai-dev-feature-list` | initializer / amend — shape, rules, priorities, coverage checklist |
 | `ai-dev-e2e-verification` | verifying a feature — Playwright MCP flow, script fallback, API/CLI, blind spots, evidence |
-| `ai-dev-knowledge-map` | building or refreshing `.ai-dev/knowledge/` |
+| `ai-dev-knowledge-map` | using and maintaining knowledge in `.ai-dev/` and the general knowledge |
 
 Project-specific skills (e.g. your design system, your data platform) are listed in `capabilities.md` so sessions know to load them.
 
@@ -182,7 +183,7 @@ Both coexist. When a session hits a credential, deployment or product question, 
 
 ### Tracking in git
 
-`.ai-dev/` is gitignored by default. The harness only survives a fresh clone or a cloud session if its notes are committed, so `/ai-dev-harness` asks once and, if you agree, tracks `.ai-dev/harness/` and `.ai-dev/knowledge/` while keeping the rest of `.ai-dev/` local.
+`.ai-dev/` is gitignored by default. The harness only survives a fresh clone or a cloud session if its notes are committed, so `/ai-dev-harness` asks once and, if you agree, tracks `.ai-dev/harness/`, `context.md` and `discovery/` while keeping the rest of `.ai-dev/` local.
 
 ---
 

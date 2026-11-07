@@ -58,10 +58,10 @@ If you discover missing work, you may append a new feature with `"passes": false
 
 1. `aidev guard` must print OK.
 2. Knowledge — the next session inherits only what you write down:
-   - changed where things live → update `.ai-dev/knowledge/map.md`, then `aidev map`
+   - changed where things live → update `.ai-dev/context.md → Estrutura do repositório`, then `aidev map`
    - lost >10 min to something → `aidev learn gotcha --symptom … --cause … --fix … --source "session N"`
    - made a choice a later session could undo → `aidev learn decision --decision … --why … --rejected …`
-   - lesson that applies beyond this repo → `aidev learn note --global --learning …`
+   - lesson that applies beyond this repo → `aidev learn note --global --learning … --applies <tech>`
 3. `git add -A && git commit -m "<feature id>: <what changed>"` — descriptive, one feature per commit.
 4. `aidev progress add --session <N> --feature <id> --result <passed|failed|fixed-env> --commit <sha> --summary "..." --state "..." --next "..." [--gotchas "..."]`
 5. Commit the harness notes too if `.ai-dev/harness` is tracked.

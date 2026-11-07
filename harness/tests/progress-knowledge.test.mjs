@@ -41,9 +41,9 @@ describe("knowledge map", () => {
     assert.equal(inv.fileCount, 3);
     assert.ok(inv.commands.some((c) => c.cmd === "npm run test"));
     assert.match(renderGenerated(inv), /src\/api/);
-    fs.mkdirSync(path.join(dir, ".ai-dev", "knowledge"), { recursive: true });
-    fs.writeFileSync(path.join(dir, ".ai-dev", "knowledge", "map.generated.md"), "");
-    const r = checkMap(dir, "API lives in `src/api/server.js`; old code was `src/legacy/x.js`; see `map.generated.md`.", inv);
+    fs.mkdirSync(path.join(dir, ".ai-dev", "discovery"), { recursive: true });
+    fs.writeFileSync(path.join(dir, ".ai-dev", "discovery", "inventory.md"), "");
+    const r = checkMap(dir, "API lives in `src/api/server.js`; old code was `src/legacy/x.js`; see `discovery/inventory.md`.", inv);
     assert.deepEqual(r.stale, ["src/legacy/x.js"]);
     assert.deepEqual(r.uncovered, ["web"]);
   });

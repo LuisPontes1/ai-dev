@@ -295,24 +295,36 @@ install_mcp() {
   fi
 }
 
-# ── 10. Global knowledge (never overwritten) ────────────────────────────────
-install_global_knowledge() {
-  local src_dir="$SCRIPT_DIR/templates/knowledge-global"
-  local dest_dir="$CLAUDE_AIDEV_DIR/knowledge"
+# ── 10. General knowledge → this repo's knowledge/ ──────────────────────────
+# General (cross-project) knowledge lives in the ai-dev repo, versioned. The installed CLI
+# finds it through ~/.claude/ai-dev/knowledge-dir. Rows from the old unversioned location
+# (~/.claude/ai-dev/knowledge/, previous ai-dev versions) are merged in once.
+install_general_knowledge() {
+  local repo_dir="$SCRIPT_DIR/knowledge"
+  local pointer="$CLAUDE_AIDEV_DIR/knowledge-dir"
+  local legacy="$CLAUDE_AIDEV_DIR/knowledge"
   if $DRY_RUN; then
-    warn "  Would create (if missing): ~/.claude/ai-dev/knowledge/{learnings,gotchas}.md"
+    warn "  Would point general knowledge to: $repo_dir (via ~/.claude/ai-dev/knowledge-dir)"
     return
   fi
-  mkdir -p "$dest_dir"
-  for f in "$src_dir"/*.md; do
-    [[ -f "$f" ]] || continue
-    if [[ -f "$dest_dir/$(basename "$f")" ]]; then
-      info "  Kept existing global knowledge: ~/.claude/ai-dev/knowledge/$(basename "$f")"
-    else
-      cp "$f" "$dest_dir/"
-      success "  Created global knowledge: ~/.claude/ai-dev/knowledge/$(basename "$f")"
-    fi
-  done
+  mkdir -p "$CLAUDE_AIDEV_DIR" "$repo_dir"
+  printf '%s\n' "$repo_dir" > "$pointer"
+  success "  General knowledge: $repo_dir (versioned in the ai-dev repo — share with 'aidev sync')"
+
+  if [[ -d "$legacy" && ! -L "$legacy" ]]; then
+    local merged=0
+    for f in "$legacy"/*.md; do
+      [[ -f "$f" ]] || continue
+      local target="$repo_dir/$(basename "$f")"
+      [[ -f "$target" ]] || cp "$f" "$target"
+      # data rows only: table lines that are not the header or separator
+      while IFS= read -r row; do
+        grep -qxF -- "$row" "$target" || { printf '%s\n' "$row" >> "$target"; merged=$((merged + 1)); }
+      done < <(grep -E '^\|' "$f" | grep -vE '^\|[ :|-]+\|$' | grep -vE '^\| *(Date|Data|Symptom|Sintoma) *\|' || true)
+    done
+    mv "$legacy" "$legacy.migrated-$(date +%Y%m%d%H%M%S)"
+    success "  Migrated $merged row(s) from ~/.claude/ai-dev/knowledge/ into the repo (old folder renamed)"
+  fi
 }
 
 # ── 11. SessionStart hook → ~/.claude/settings.json ─────────────────────────
@@ -392,10 +404,10 @@ print_summary() {
   echo "  ~/.claude/ai-dev/enabled             — toggle flag (ai-dev is ON)"
   echo "  ~/.claude/ai-dev/                    — on-demand protocol files + templates"
   echo "  ~/.claude/ai-dev/personas/           — specialist prompt templates (8 personas)"
-  echo "  ~/.claude/ai-dev/templates/          — starters, task/agent/report, harness + knowledge templates"
-  echo "  ~/.claude/ai-dev/harness/aidev.mjs   — long-running harness CLI (features, progress, knowledge map)"
+  echo "  ~/.claude/ai-dev/templates/          — starters (context.md with map/decisions/gotchas), task/report, harness"
+  echo "  ~/.claude/ai-dev/harness/aidev.mjs   — aidev CLI (features, progress, map, brief/recall/learn/sync)"
   echo "  ~/.claude/skills/ai-dev-*            — long-run session, feature list, e2e verification, knowledge map"
-  echo "  ~/.claude/ai-dev/knowledge/          — global memory (learnings, gotchas) — never overwritten"
+  echo "  $SCRIPT_DIR/knowledge/  — general knowledge (all projects), versioned here; 'aidev sync' to share"
   echo "  ~/.claude/settings.json              — SessionStart hook: knowledge brief every session + after compaction"
   echo "  ~/.claude/ai-dev/guidelines/         — Karpathy coding discipline (all subagents + Copilot prompts)"
   echo "  ~/.claude/commands/                  — /ai-dev-init, /ai-dev-exec, /ai-dev-harness, /ai-dev-loop, ..."
@@ -424,7 +436,7 @@ install_copilot_plugin
 install_harness
 install_skills
 install_mcp
-install_global_knowledge
+install_general_knowledge
 install_knowledge_hook
 install_superpowers
 print_summary

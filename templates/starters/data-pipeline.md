@@ -36,12 +36,22 @@
 └── .ai-dev/                 # Planejamento (gitignored)
 ```
 
+### Onde procurar
+
+<!-- Mapa do código: perguntas de quem chega e onde está a resposta. Caminhos em backticks —
+     `aidev map --check` avisa quando um caminho deixa de existir. Inventário automático em
+     `discovery/inventory.md` (`aidev map`). -->
+
+| Pergunta | Resposta |
+|----------|----------|
+| [Onde ficam os entrypoints?] | [`path/`] |
+
 ## Decisões de arquitetura
 
-| Decisão | Justificativa |
-|---------|---------------|
-| Medallion architecture (bronze/silver/gold) | [TODO] |
-| [TODO] | [TODO] |
+| Data | Decisão | Justificativa | Alternativas rejeitadas | Origem |
+|------|---------|---------------|-------------------------|--------|
+| - | Medallion architecture (bronze/silver/gold) | [TODO] | - | - |
+| - | [TODO] | [TODO] | - | - |
 
 ## Restrições
 
@@ -54,6 +64,28 @@
 - Schema validation: [TODO: Great Expectations | dbt tests | manual]
 - Alertas de falha: [TODO: email | Slack | PagerDuty]
 - Estratégia de reprocessamento: [TODO: full reload | incremental | partição específica]
+
+## Invariantes
+
+<!-- Regras que, se quebradas, causam bug em outro lugar. Cite o arquivo que as garante (em backticks). -->
+
+- [ex.: toda escrita passa por `src/db/tx.py`]
+
+## Gotchas
+
+<!-- Sintoma → causa → correção, para o que custou >10 min. Escrito com `aidev learn gotcha`.
+     O hook de início de sessão injeta as últimas linhas em toda sessão. -->
+
+| Sintoma | Causa | Correção | Origem |
+|---------|-------|----------|--------|
+
+## Aprendizados
+
+<!-- Lições do projeto que não cabem em decisão nem gotcha. Escrito com `aidev learn note`.
+     Lição que vale para outros projetos → `aidev learn note --global` (vai para o repo ai-dev). -->
+
+| Data | Aprendizado | Aplica-se a | Origem |
+|------|-------------|-------------|--------|
 
 ## Credenciais
 

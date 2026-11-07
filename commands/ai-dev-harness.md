@@ -15,8 +15,8 @@ Read `~/.claude/ai-dev/harness.md` first. `aidev` = `node ~/.claude/ai-dev/harne
 2. If `.ai-dev/harness/features.lock.json` exists and `--amend` was not passed: stop —
    "Harness already initialized. Use `/ai-dev-session`, `/ai-dev-loop`, or `/ai-dev-harness --amend`."
 3. Ask the user ONE question (use AskUserQuestion if available):
-   "Track `.ai-dev/harness` in git (knowledge is already tracked)? Recommended — otherwise a fresh clone or
-   cloud session starts with no feature list or progress log." Apply the answer per `harness.md → Tracking the harness in git`.
+   "Track `.ai-dev/harness`, `context.md` and `discovery/` in git? Recommended — otherwise a fresh clone or
+   cloud session starts with no feature list, progress log or project knowledge." Apply the answer per `harness.md → Tracking the harness in git`.
 
 ## Step 1 — Feature list
 
@@ -55,7 +55,7 @@ If it cannot (missing credential, service), stop and ask — the harness is usel
 
 ## Step 4 — Knowledge map
 
-Run the `/ai-dev-knowledge` steps (generate inventory, curate `map.md`, seed `decisions.md` and `gotchas.md`).
+Run the `/ai-dev-knowledge` steps (inventory into `discovery/`, curate the map, invariants and decisions in `context.md`).
 
 ## Step 5 — Notes and first commit
 

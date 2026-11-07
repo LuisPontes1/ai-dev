@@ -5,6 +5,7 @@
 // (one feature at a time, no edited tests, evidence before "passes") are
 // enforced by code instead of by prompt.
 
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -13,7 +14,7 @@ import {
 } from "./lib/features.mjs";
 import { appendEntry, tail } from "./lib/progress.mjs";
 import { checkMap, renderGenerated, scan } from "./lib/knowledge.mjs";
-import { brief, globalKnowledgeDir, learn, recall } from "./lib/memory.mjs";
+import { aidevHome, brief, globalKnowledgeDir, learn, recall } from "./lib/memory.mjs";
 
 const USAGE = `aidev — ai-dev long-running harness
 
@@ -34,17 +35,20 @@ Progress log (.ai-dev/harness/progress.md):
                      --summary <text> --state <text> --next <text>
                      [--gotchas <text>] [--commit <sha>] [--session N]
 
-Knowledge map (.ai-dev/knowledge/):
-  aidev map [--depth 2]                 regenerate map.generated.md
-  aidev map --check                     report stale paths / uncovered modules in map.md
+Code map (inside .ai-dev — no separate store):
+  aidev map [--depth 2]                 write .ai-dev/discovery/inventory.md (modules, languages, entrypoints, commands)
+  aidev map --check                     stale paths / uncovered modules in .ai-dev/context.md
 
-Memory (always on — project .ai-dev/knowledge/ + global ~/.claude/ai-dev/knowledge/):
+Knowledge (project = .ai-dev/ · general = <ai-dev repo>/knowledge/):
   aidev brief [--max-chars 9000]        compact knowledge digest (what the SessionStart hook injects)
   aidev brief --hook                    hook mode: reads hook JSON on stdin, prints additionalContext
-  aidev recall <terms...> [--limit 8]   ranked search across knowledge, progress and delivery reports
+  aidev recall <terms...> [--limit 8]   ranked search: context, discovery, reports, tasks, plan, logs, general knowledge
   aidev learn gotcha   --symptom <s> --fix <f> [--cause <c>] [--source <s>] [--global]
-  aidev learn decision --decision <d> --why <w> [--rejected <r>] [--source <s>]
+  aidev learn decision --decision <d> --why <w> [--rejected <r>] [--source <s>]   (project only)
   aidev learn note     --learning <l> [--applies <scope>] [--source <s>] [--global]
+                     project → .ai-dev/context.md (Gotchas · Decisões de arquitetura · Aprendizados)
+                     --global → ai-dev repo knowledge/ (gotchas.md · learnings.md)
+  aidev sync [--no-push]                commit general knowledge in the ai-dev repo, pull --rebase, push
 
 Health:
   aidev doctor [--json]                 everything the PM checks after a session
@@ -185,23 +189,22 @@ function cmdProgress(p, positional, flags) {
 
 function cmdMap(root, p, flags) {
   const inv = scan(root, { depth: Number(flags.depth || 2) });
-  fs.mkdirSync(p.knowledge, { recursive: true });
   if (flags.check) {
-    const mapFile = path.join(p.knowledge, "map.md");
-    if (!fs.existsSync(mapFile)) {
-      process.stderr.write("No .ai-dev/knowledge/map.md yet — run /ai-dev-knowledge.\n");
+    if (!fs.existsSync(p.context)) {
+      process.stderr.write("No .ai-dev/context.md — run /ai-dev-init.\n");
       process.exitCode = 1;
       return;
     }
-    const r = checkMap(root, fs.readFileSync(mapFile, "utf8"), inv);
-    const lines = [`map.md mentions ${r.mentioned} paths`];
+    const r = checkMap(root, fs.readFileSync(p.context, "utf8"), inv);
+    const lines = [`context.md mentions ${r.mentioned} paths`];
     lines.push(r.stale.length ? `  stale (no longer exist): ${r.stale.join(", ")}` : "  stale: none");
     lines.push(r.uncovered.length ? `  uncovered top-level modules: ${r.uncovered.join(", ")}` : "  uncovered: none");
     out(r, flags.json, lines.join("\n"));
     if (r.stale.length) process.exitCode = 2;
     return;
   }
-  const target = path.join(p.knowledge, "map.generated.md");
+  fs.mkdirSync(p.discovery, { recursive: true });
+  const target = path.join(p.discovery, "inventory.md");
   fs.writeFileSync(target, renderGenerated(inv));
   out(null, false, `map: ${inv.fileCount} files, ${inv.modules.length} modules → ${path.relative(process.cwd(), target) || target}`);
 }
@@ -209,22 +212,25 @@ function cmdMap(root, p, flags) {
 function cmdDoctor(root, p, flags) {
   const checks = [];
   const add = (name, ok, detail) => checks.push({ name, ok, detail });
-  add("features.json exists", fs.existsSync(p.features), p.features);
-  add("init.sh exists", fs.existsSync(p.init), p.init);
-  add("progress.md exists", fs.existsSync(p.progress), p.progress);
+  const harness = fs.existsSync(p.base);
+  if (harness) {
+    add("features.json exists", fs.existsSync(p.features), p.features);
+    add("init.sh exists", fs.existsSync(p.init), p.init);
+    add("progress.md exists", fs.existsSync(p.progress), p.progress);
+  }
   if (fs.existsSync(p.features)) {
     const errors = validate(loadFeatures(p.features));
     add("features.json valid", errors.length === 0, errors.join("; ") || "ok");
     const g = runGuard(p);
     add("guard", !g.error && g.ok, g.error || [g.removed.length && `removed ${g.removed}`, g.edited.length && `edited ${g.edited}`, g.addedPassing.length && `added passing ${g.addedPassing}`].filter(Boolean).join("; ") || "ok");
   }
-  const mapFile = path.join(p.knowledge, "map.md");
-  if (fs.existsSync(mapFile)) {
-    const r = checkMap(root, fs.readFileSync(mapFile, "utf8"), scan(root));
-    add("knowledge map fresh", r.stale.length === 0, r.stale.length ? `stale: ${r.stale.join(", ")}` : `uncovered: ${r.uncovered.join(", ") || "none"}`);
-  } else add("knowledge map exists", false, mapFile);
+  if (fs.existsSync(p.context)) {
+    const r = checkMap(root, fs.readFileSync(p.context, "utf8"), scan(root));
+    add("context.md map fresh", r.stale.length === 0, `stale: ${r.stale.join(", ")}`);
+    if (r.uncovered.length) checks.push({ name: `context.md doesn't mention: ${r.uncovered.join(", ")}`, ok: true, warn: true });
+  } else add("context.md exists", false, p.context);
   const allOk = checks.every((c) => c.ok);
-  out({ ok: allOk, checks }, flags.json, checks.map((c) => `${c.ok ? "✅" : "❌"} ${c.name}${c.ok ? "" : ` — ${c.detail}`}`).join("\n"));
+  out({ ok: allOk, checks }, flags.json, checks.map((c) => `${c.warn ? "⚠️ " : c.ok ? "✅" : "❌"} ${c.name}${c.ok ? "" : ` — ${c.detail}`}`).join("\n"));
   if (!allOk) process.exitCode = 1;
 }
 
@@ -255,7 +261,7 @@ function cmdBrief(rootArg, flags) {
   let source = "manual";
   if (flags.hook) {
     // Hook contract: JSON on stdin with cwd + source; stay silent when ai-dev is OFF.
-    if (!fs.existsSync(path.join(path.dirname(globalKnowledgeDir()), "enabled"))) return;
+    if (!fs.existsSync(path.join(aidevHome(), "enabled"))) return;
     if (!process.stdin.isTTY) {
       try {
         const input = JSON.parse(fs.readFileSync(0, "utf8") || "{}");
@@ -273,7 +279,7 @@ function cmdBrief(rootArg, flags) {
     process.stdout.write(`${JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: text } })}\n`);
     return;
   }
-  out(null, false, text || "(no knowledge yet — run /ai-dev-knowledge, or record with `aidev learn`)");
+  out(null, false, text || "(no knowledge yet — fill .ai-dev/context.md (/ai-dev-knowledge), or record with `aidev learn`)");
 }
 
 function cmdRecall(root, positional, flags) {
@@ -289,7 +295,39 @@ function cmdLearn(root, positional, flags) {
   const kind = positional[1];
   const values = Object.fromEntries(Object.entries(flags).filter(([, v]) => v !== true));
   const r = learn(findProjectRoot(root) || root, kind, values, { global: Boolean(flags.global) });
-  out(null, false, r.duplicate ? `learn: already recorded in ${r.file}` : `learn: ${kind} → ${r.file}`);
+  out(null, false, r.duplicate ? `learn: already recorded in ${r.file}` : `learn: ${kind} → ${r.file}${flags.global ? "  (run `aidev sync` to share it across machines)" : ""}`);
+}
+
+// General knowledge lives in the ai-dev repo: commit it there and sync with the remote.
+function cmdSync(flags) {
+  const dir = globalKnowledgeDir();
+  const run = (cwd, args) => execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+  let top;
+  try {
+    top = run(dir, ["rev-parse", "--show-toplevel"]);
+  } catch {
+    throw new Error(`${dir} is not inside a git repo — reinstall from a clone of ai-dev (bash install.sh) to version general knowledge`);
+  }
+  const rel = path.relative(fs.realpathSync(top), fs.realpathSync(dir)) || ".";
+  const git = (...args) => run(top, args); // pathspecs relative to the repo root
+  git("add", "--", rel);
+  const staged = git("diff", "--cached", "--name-only", "--", rel);
+  if (staged) {
+    const n = git("diff", "--cached", "--numstat", "--", rel).split("\n").reduce((a, l) => a + (Number(l.split("\t")[0]) || 0), 0);
+    git("commit", "-m", `knowledge: ${n} new line(s) of general knowledge`, "--", rel);
+  }
+  const lines = [staged ? `committed: ${staged.split("\n").join(", ")}` : "nothing new to commit"];
+  if (!flags["no-push"]) {
+    try {
+      git("pull", "--rebase", "--autostash");
+      git("push");
+      lines.push("pulled and pushed");
+    } catch (err) {
+      lines.push(`sync with remote failed — resolve in ${top}: ${String(err.stderr || err.message).split("\n")[0]}`);
+      process.exitCode = 1;
+    }
+  }
+  out(null, false, `ai-dev knowledge (${top}/${rel})\n${lines.join("\n")}`);
 }
 
 export function main(argv = process.argv.slice(2)) {
@@ -326,6 +364,7 @@ export function main(argv = process.argv.slice(2)) {
     case "brief": return cmdBrief(root, flags);
     case "recall": return cmdRecall(root, positional, flags);
     case "learn": return cmdLearn(root, positional, flags);
+    case "sync": return cmdSync(flags);
     case undefined:
     case "help":
     case "--help":

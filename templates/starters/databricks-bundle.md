@@ -31,6 +31,16 @@
 └── .ai-dev/                 # Planejamento (gitignored)
 ```
 
+### Onde procurar
+
+<!-- Mapa do código: perguntas de quem chega e onde está a resposta. Caminhos em backticks —
+     `aidev map --check` avisa quando um caminho deixa de existir. Inventário automático em
+     `discovery/inventory.md` (`aidev map`). -->
+
+| Pergunta | Resposta |
+|----------|----------|
+| [Onde ficam os entrypoints?] | [`path/`] |
+
 ## Targets
 
 | Target | Workspace | Uso |
@@ -40,15 +50,37 @@
 
 ## Decisões de arquitetura
 
-| Decisão | Justificativa |
-|---------|---------------|
-| Usar Unity Catalog | Governança centralizada |
-| [TODO] | [TODO] |
+| Data | Decisão | Justificativa | Alternativas rejeitadas | Origem |
+|------|---------|---------------|-------------------------|--------|
+| - | Usar Unity Catalog | Governança centralizada | - | - |
+| - | [TODO] | [TODO] | - | - |
 
 ## Restrições
 
 - Não criar tabelas diretamente no schema `prod` — usar target `dev` para testes
 - [TODO: outras restrições]
+
+## Invariantes
+
+<!-- Regras que, se quebradas, causam bug em outro lugar. Cite o arquivo que as garante (em backticks). -->
+
+- [ex.: toda escrita passa por `src/db/tx.py`]
+
+## Gotchas
+
+<!-- Sintoma → causa → correção, para o que custou >10 min. Escrito com `aidev learn gotcha`.
+     O hook de início de sessão injeta as últimas linhas em toda sessão. -->
+
+| Sintoma | Causa | Correção | Origem |
+|---------|-------|----------|--------|
+
+## Aprendizados
+
+<!-- Lições do projeto que não cabem em decisão nem gotcha. Escrito com `aidev learn note`.
+     Lição que vale para outros projetos → `aidev learn note --global` (vai para o repo ai-dev). -->
+
+| Data | Aprendizado | Aplica-se a | Origem |
+|------|-------------|-------------|--------|
 
 ## Credenciais
 

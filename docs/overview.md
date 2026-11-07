@@ -344,7 +344,7 @@ Together, these answer: *what was the plan? what actually happened? why did the 
 
 ## Long-running harness
 
-For builds that span many sessions, the PM switches from tasks to a **feature list** (`.ai-dev/harness/features.json`): an initializer writes 20–300 user-visible features, all failing; you approve and they are frozen; then each session is a fresh subagent that implements and verifies exactly one feature, records it through the `aidev` CLI (evidence required), commits, and appends a handoff note. The PM audits every session (`aidev guard`, `aidev doctor`) before starting the next. A curated **knowledge map** (`.ai-dev/knowledge/`) — checked against the real tree — keeps each session from re-learning the codebase, and `capabilities.md` tells it which MCP servers and skills to use for verification.
+For builds that span many sessions, the PM switches from tasks to a **feature list** (`.ai-dev/harness/features.json`): an initializer writes 20–300 user-visible features, all failing; you approve and they are frozen; then each session is a fresh subagent that implements and verifies exactly one feature, records it through the `aidev` CLI (evidence required), commits, and appends a handoff note. The PM audits every session (`aidev guard`, `aidev doctor`) before starting the next. The project knowledge in `.ai-dev/` (the code map, decisions, invariants and gotchas in `context.md`, checked against the real tree) plus the ai-dev general knowledge is injected into every session, which keeps each session from re-learning the codebase, and `capabilities.md` tells it which MCP servers and skills to use for verification.
 
 See [long-running-harness.md](long-running-harness.md).
 

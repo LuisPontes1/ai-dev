@@ -47,11 +47,16 @@ describe("aidev CLI", () => {
     assert.equal(r.status, 2);
     assert.match(r.stdout, /edited:\s+F-002/);
   });
-  it("doctor reports missing knowledge map", () => {
+  it("doctor reports missing context.md, then checks its paths", () => {
     const root = project();
     run(root, "freeze");
-    const r = run(root, "doctor");
+    let r = run(root, "doctor");
     assert.equal(r.status, 1);
-    assert.match(r.stdout, /knowledge map exists/);
+    assert.match(r.stdout, /context\.md exists/);
+    fs.writeFileSync(path.join(root, ".ai-dev", "context.md"), "## Estrutura do repositório\n\n`src/gone.js` used to be here\n");
+    r = run(root, "doctor");
+    assert.match(r.stdout, /stale: src\/gone\.js/);
+    run(root, "map");
+    assert.ok(fs.existsSync(path.join(root, ".ai-dev", "discovery", "inventory.md")));
   });
 });

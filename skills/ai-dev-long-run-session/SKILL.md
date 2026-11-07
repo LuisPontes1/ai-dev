@@ -14,7 +14,7 @@ notes are not. Design everything you leave behind so **a stranger could pick it 
 
 | # | Move | Command / file | Why |
 |---|------|----------------|-----|
-| 1 | Bearings | `aidev progress tail -n 3`, `git log --oneline -20`, `aidev status`, `.ai-dev/knowledge/map.md` | you have no memory |
+| 1 | Bearings | `aidev progress tail -n 3`, `git log --oneline -20`, `aidev status`, `aidev brief` | you have no memory |
 | 2 | Solid ground | `bash .ai-dev/harness/init.sh`, re-verify the last 1–2 passed features | never build on a broken base |
 | 3 | One feature | `next-override.txt` or `aidev next` | doing two is how sessions end half-done |
 | 4 | Build + verify like a user | skill `ai-dev-e2e-verification` | unit tests ≠ working feature |
@@ -45,7 +45,7 @@ notes are not. Design everything you leave behind so **a stranger could pick it 
 - **summary** — what changed, in user terms, plus the key files
 - **state** — does init.sh pass, do tests pass, anything running or half-done
 - **next** — the single most useful instruction for the next session
-- **gotchas** — anything that cost you >10 min (also append to `.ai-dev/knowledge/gotchas.md`)
+- **gotchas** — anything that cost you >10 min (also `aidev learn gotcha` → context.md, `--global` if it's not repo-specific)
 
 Bad: "worked on auth". Good: "F-002 reset password works end to end (screenshot evidence/F-002-3.png).
 Mail is captured in `tmp/mail/*.eml` by the dev mailer — read it there, there is no SMTP. Next: F-003."

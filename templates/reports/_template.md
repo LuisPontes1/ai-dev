@@ -57,7 +57,8 @@
 
 - **Gotcha:** [sintoma] → [causa] → [correção]
 - **Decisão:** [decisão] — [por quê] — [alternativa rejeitada]
-- **Mapa:** [módulo/arquivo novo ou movido — já atualizado em .ai-dev/knowledge/map.md?]
+- **Mapa:** [módulo/arquivo novo ou movido — já atualizado em context.md → Estrutura do repositório?]
+- **Geral:** [lição que vale para outros projetos → `aidev learn note --global`]
 
 ## Observações
 

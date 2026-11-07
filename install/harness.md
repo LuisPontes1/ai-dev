@@ -33,7 +33,7 @@ session that hits a deployment/credential question stops and becomes a plan task
 | Starts on a broken environment | `init.sh` + smoke test + re-verify last features first |
 | Marks untested work as finished | `aidev pass` requires `--evidence`; browser features need screenshots |
 | Rewrites tests to make them pass | `features.lock.json` + `aidev guard` after every session |
-| Relearns the codebase every session | `knowledge/map.md` checked by `aidev map --check` |
+| Relearns the codebase every session | `context.md` map + knowledge brief, checked by `aidev map --check` |
 | Doesn't know which tools it has | `capabilities.md` (MCP servers, skills, verification ladder) |
 
 ---
@@ -46,7 +46,7 @@ Creates, in this order, then stops for user approval:
    Load skill `ai-dev-feature-list`. Every feature: id, category, priority, description, steps, verify, touches, `passes:false`.
 2. `.ai-dev/harness/init.sh` — idempotent bootstrap + smoke test. Must be run once and work before handoff.
 3. `.ai-dev/harness/capabilities.md` — real MCP servers (`claude mcp list`), installed skills, verification ladder.
-4. `.ai-dev/knowledge/` — `aidev map`, then curate `map.md`, seed `decisions.md`, `gotchas.md`.
+4. Knowledge — `/ai-dev-knowledge` steps: `aidev map` → `discovery/inventory.md`, curate `context.md` (map, invariants, decisions).
 5. `.ai-dev/harness/session-prompt.md` — copied verbatim from the template. Never customised per session.
 6. `.ai-dev/harness/progress.md` — Session 0 entry.
 7. Initial git commit of the skeleton.
@@ -107,20 +107,21 @@ the candidate features have disjoint `touches`; each runs in a worktree, merge s
 
 ## Knowledge map upkeep
 
-- Sessions update `map.md` in the same commit as the change that made it wrong.
+- Sessions update `context.md → Estrutura do repositório` in the same commit as the change that made it wrong.
 - The PM runs `aidev map --check` in the audit; stale paths are a warning in single mode
   and trigger a `/ai-dev-knowledge` refresh session (not a feature) in loop mode every 10 sessions or when stale ≥ 3.
 
 ## Tracking the harness in git
 
-`/ai-dev-init` already tracks `.ai-dev/knowledge/` (`.ai-dev/*` + `!.ai-dev/knowledge/`). The harness only works
-across machines and cloud sessions if its notes survive too, so `/ai-dev-harness` asks once:
+`.ai-dev/` is gitignored by default (plan mode is personal). A harness only works across machines and cloud
+sessions if its notes and the project knowledge survive, so `/ai-dev-harness` asks once:
 
 - **Track (recommended for harness):** replace `.ai-dev/` in `.gitignore` with
   ```
   .ai-dev/*
   !.ai-dev/harness/
-  !.ai-dev/knowledge/
+  !.ai-dev/context.md
+  !.ai-dev/discovery/
   .ai-dev/harness/logs/
   ```
 - **Local only:** keep as is; warn that a fresh clone/cloud container starts with no harness.

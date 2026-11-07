@@ -1,44 +1,66 @@
 # Knowledge & Skills
 
-> Memory that persists between sessions and gets used every time, plus the external skills (Superpowers,
-> Karpathy) wired into the right moments of ai-dev.
+> Knowledge that persists between sessions — in `.ai-dev/` for each project and in the ai-dev repo for all of
+> them — loaded into every session automatically, plus the external skills (Superpowers, Karpathy) wired into
+> the right moments of ai-dev.
 
 ---
 
 ## Knowledge: always on, across sessions
 
+Knowledge has no separate store. It is **`.ai-dev/` itself** — the structure ai-dev always had — plus a
+**general knowledge** folder inside the ai-dev repo for what applies to every project.
+
 ### Where it lives
 
-| Scope | Path | In git | Content |
-|-------|------|--------|---------|
-| Project | `.ai-dev/knowledge/map.md` | yes | architecture, modules ↔ features, where to look, invariants, data model |
-| Project | `.ai-dev/knowledge/map.generated.md` | yes | inventory from `aidev map` (ground truth for the map) |
-| Project | `.ai-dev/knowledge/decisions.md` | yes | decisions a later session could undo by accident |
-| Project | `.ai-dev/knowledge/gotchas.md` | yes | symptom → cause → fix |
-| Global | `~/.claude/ai-dev/knowledge/learnings.md` | — | lessons for every project: your preferences, tool quirks, platform behaviour |
-| Global | `~/.claude/ai-dev/knowledge/gotchas.md` | — | cross-project gotchas |
+**Project — `.ai-dev/` (local, gitignored as always)**
 
-`/ai-dev-init` creates the project knowledge in every project (not only harness mode) and writes
-`.gitignore` as `.ai-dev/*` + `!.ai-dev/knowledge/`: plans stay local, knowledge survives clones, other
-machines and cloud sessions. The installer creates the global files once and never overwrites them.
+| Knowledge | Where | How it gets there |
+|-----------|-------|-------------------|
+| objective, stack, constraints, credentials (names) | `context.md` | `/ai-dev-init`, PM |
+| code map: tree + "Onde procurar" | `context.md → Estrutura do repositório` | `/ai-dev-init`, `/ai-dev-knowledge`, sessions that move code |
+| decisions | `context.md → Decisões de arquitetura` | `aidev learn decision` |
+| invariants | `context.md → Invariantes` | agents |
+| gotchas | `context.md → Gotchas` | `aidev learn gotcha` |
+| learnings | `context.md → Aprendizados` | `aidev learn note` |
+| inventory (modules, languages, entrypoints, commands) | `discovery/inventory.md` | `aidev map` |
+| findings about external systems | `discovery/*.md` | discovery / preflight tasks |
+| what each task learned | `reports/delivery-XXX.md → ## Conhecimento` | subagents; PM records it via `aidev learn` |
+| why the plan changed | `plan.md → ## Changelog` | PM |
+| harness handoff notes | `harness/progress.md` | harness sessions |
+
+`context.md` already said it was "the single source of truth… agents read this before starting any task"; it
+now also carries the map, invariants, gotchas and learnings, so that one file is what every session loads.
+
+**General — `<ai-dev repo>/knowledge/` (versioned, every project, every machine)**
+
+| File | Written with |
+|------|--------------|
+| `learnings.md` | `aidev learn note --global --learning "…" --applies databricks` |
+| `gotchas.md` | `aidev learn gotcha --global --symptom "…" --fix "…"` |
+
+`install.sh` points the CLI at this folder of your clone (`~/.claude/ai-dev/knowledge-dir`), so lessons are
+written straight into the repo. `aidev sync` commits that folder, pulls with rebase and pushes — the PM asks
+before running it. On another machine: `git pull` in ai-dev (or `aidev sync`) and the knowledge is there.
 
 ### How it gets used — automatically
 
 ```
 SessionStart hook  (startup · resume · /clear · after compaction)
    └─ node ~/.claude/ai-dev/harness/aidev.mjs brief --hook
-        └─ injects "## ai-dev knowledge brief" into context:
-             your learnings (all projects) · architecture · modules · where to look · invariants
-             · last gotchas · decisions · harness status + last progress note
+        └─ injects "## ai-dev knowledge brief":
+             general knowledge relevant to this project
+             · context.md: objective, map, invariants, restrictions, decisions, gotchas, learnings
+             · "## Conhecimento" of the last delivery reports · plan status · discovery files
+             · harness status + last progress note
 ```
 
-The model doesn't have to remember to read anything: the brief is in context from the first turn, and
-re-injected after compaction (the moment long sessions usually "forget"). It is silent when ai-dev is OFF,
-works from any subfolder of the project, and is capped (~9k chars) so it never crowds the window — older
-rows are reachable with `recall`.
-
-Subagents don't get SessionStart hooks, so every subagent prompt starts with `aidev brief` + `aidev recall <task terms>`.
-Copilot can't run commands, so the PM inlines the brief into Copilot prompt files.
+- In context from the first turn, and **re-injected after compaction** — when long sessions usually forget.
+- General learnings are filtered: only rows whose "Aplica-se a" is empty/`all` or names something in this
+  project's `context.md` (a Databricks lesson doesn't show up in a React project).
+- Never injects `## Credenciais`. Silent when ai-dev is OFF. Works from any subfolder. Capped at ~9k chars.
+- Subagents don't get SessionStart hooks → every subagent prompt starts with `aidev brief` + `aidev recall`.
+  Copilot can't run commands → the PM inlines the brief into its prompt file.
 
 ### How it grows
 
@@ -46,24 +68,26 @@ Copilot can't run commands, so the PM inlines the brief into Copilot prompt file
 |--------|---------|
 | Lost >10 min to something | `aidev learn gotcha --symptom "…" --cause "…" --fix "…" [--global]` |
 | Made a choice a later session could undo | `aidev learn decision --decision "…" --why "…" --rejected "…"` |
-| Lesson that applies beyond this repo | `aidev learn note --global --learning "…" --applies "databricks"` |
-| Moved / added modules | edit `map.md` in the same commit, then `aidev map` |
-| Task finished | delivery report `## Conhecimento` → PM records anything missing |
-| Same gotcha / procedure in ≥ 2 sessions | promote to a project skill (`.claude/skills/`) |
+| Lesson that applies beyond this repo | `aidev learn note --global --learning "…" --applies <tech>` |
+| Moved / added modules | update `context.md → Estrutura` in the same commit, then `aidev map` |
+| Task finished | `## Conhecimento` in the delivery report → PM records what's missing |
+| Knowledge in the wrong place, or repeated ≥ 2 sessions | `/ai-dev-knowledge --promote` |
 
-`learn` writes one table row, deterministically, and ignores exact duplicates. `aidev map --check` reports
-paths in `map.md` that no longer exist and modules it never mentions.
+`learn` inserts one row into the right table of `context.md` (creating the section in an older context.md),
+maps values by column name (old 2-column decision tables still work), drops template placeholder rows, and
+ignores exact duplicates. `aidev map --check` reports paths in `context.md` that no longer exist.
 
 ### Searching
 
 ```
 aidev recall login cookie
-[project] .ai-dev/knowledge/gotchas.md:7
-| Symptom | Cause | Fix / workaround | Found in |
-| login redirect loop | cookie SameSite=None on http | set SameSite=Lax in dev | session 12 |
+[context] .ai-dev/context.md:88
+| Sintoma | Causa | Correção | Origem |
+| login redirect loop | cookie SameSite=None em http | SameSite=Lax em dev | task-007 |
 ```
 
-Ranked across project knowledge, global learnings, `progress.md` and delivery reports.
+Ranked across `context.md`, `discovery/`, `reports/`, `tasks/`, `plan.md`, `session-log.md`,
+`harness/progress.md` and the general knowledge.
 
 ### Installing the hook by hand
 
@@ -134,7 +158,7 @@ an ai-dev equivalent.
 
 | Skill | Used when |
 |-------|-----------|
-| `ai-dev-knowledge-map` | load → recall → capture → promote; building or refreshing the map |
+| `ai-dev-knowledge-map` | load → recall → capture → promote across `.ai-dev/` and general knowledge |
 | `ai-dev-long-run-session` | every harness session |
 | `ai-dev-feature-list` | initializer / amend |
 | `ai-dev-e2e-verification` | verifying a feature like a user (Playwright MCP) |

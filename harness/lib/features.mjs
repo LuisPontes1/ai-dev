@@ -44,7 +44,8 @@ export function harnessPaths(root) {
     lock: path.join(base, "features.lock.json"),
     progress: path.join(base, "progress.md"),
     init: path.join(base, "init.sh"),
-    knowledge: path.join(root, ".ai-dev", "knowledge"),
+    context: path.join(root, ".ai-dev", "context.md"),
+    discovery: path.join(root, ".ai-dev", "discovery"),
   };
 }
 

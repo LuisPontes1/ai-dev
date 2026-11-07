@@ -59,20 +59,24 @@ Harness: 42/120 features passing  ███████░░░░░░░░�
 Last session (14): F-031 ✅ — "Next: F-032, mail is captured in tmp/mail"
 ```
 
-What makes it hold over many sessions is structure, not prompting: a frozen feature list with a lock file (no rewriting tests), evidence-gated `passes`, an append-only progress log, an `init.sh` smoke test, and a **knowledge map** (`.ai-dev/knowledge/`) checked for staleness against the real tree. Full guide: [docs/long-running-harness.md](docs/long-running-harness.md).
+What makes it hold over many sessions is structure, not prompting: a frozen feature list with a lock file (no rewriting tests), evidence-gated `passes`, an append-only progress log, an `init.sh` smoke test, and the project knowledge in `.ai-dev/context.md` (code map, decisions, gotchas) checked for staleness against the real tree. Full guide: [docs/long-running-harness.md](docs/long-running-harness.md).
 
 ---
 
 ## Knowledge that survives sessions — and is always used
 
+Knowledge has no separate store — it is the `.ai-dev/` you already have, plus a general folder in this repo:
+
 ```
-.ai-dev/knowledge/            (tracked in git)        ~/.claude/ai-dev/knowledge/   (all projects)
-  map.md · decisions.md · gotchas.md                    learnings.md · gotchas.md
-              └──────────── SessionStart hook: startup · resume · /clear · after compaction ───────────┘
-                                   → "## ai-dev knowledge brief" in context, every time
+project:  .ai-dev/context.md   map · Decisões de arquitetura · Invariantes · Gotchas · Aprendizados
+          .ai-dev/discovery/   findings (+ inventory.md from `aidev map`)
+          .ai-dev/reports/     "## Conhecimento" of every task · plan.md changelog · session-log
+general:  ai-dev/knowledge/    learnings.md · gotchas.md — versioned here, every project, every machine
+              └──── SessionStart hook: startup · resume · /clear · after compaction ────┘
+                         → "## ai-dev knowledge brief" in context, every time
 ```
 
-- **Load** automatically (hook) · **recall** with `aidev recall <terms>` · **capture** with `aidev learn gotcha|decision|note [--global]` · **promote** repeated knowledge into project skills
+- **Load** automatically (hook; general lessons filtered to the project's stack) · **recall** with `aidev recall <terms>` · **capture** with `aidev learn gotcha|decision|note` (into `context.md`; `--global` into `ai-dev/knowledge/`) · **share** with `aidev sync` · **promote** with `/ai-dev-knowledge --promote`
 - Every subagent starts with `aidev brief` + `recall`; every delivery report has a `## Conhecimento` section the PM records
 - **Karpathy guidelines** (bundled) are the baseline discipline for every subagent and Copilot prompt
 - **Superpowers** (optional plugin) skills are routed by moment: brainstorming before planning, systematic-debugging on failures, verification-before-completion before "done", TDD, code review, writing-skills to promote knowledge
@@ -106,7 +110,7 @@ bash install.sh        # --dry-run · --with-mcp (Playwright MCP) · --with-supe
 | Skills | `~/.claude/skills/ai-dev-*` | Long-run session, feature list, e2e verification, knowledge map |
 | MCP (opt-in) | user scope | Playwright MCP for browser verification (`--with-mcp`) |
 | Knowledge hook | `~/.claude/settings.json` | SessionStart: injects the knowledge brief every session and after compaction |
-| Global memory | `~/.claude/ai-dev/knowledge/` | Cross-project learnings and gotchas (never overwritten) |
+| General knowledge | `knowledge/` in this repo | Cross-project learnings and gotchas, versioned; installer points the CLI here |
 | Guidelines | `~/.claude/ai-dev/guidelines/` | Karpathy coding discipline |
 | Skills routing | `~/.claude/ai-dev/skills.md` | When to use which ai-dev / Superpowers skill |
 | Superpowers (opt-in) | Claude Code plugin | `--with-superpowers` |
@@ -163,7 +167,7 @@ Each project gets this (created by `/ai-dev-init`, gitignored):
 
 ```
 .ai-dev/
-├── context.md            # Project briefing: stack, architecture, credentials
+├── context.md            # Project knowledge: stack, code map, decisions, invariants, gotchas, learnings, credentials (names)
 ├── plan.md               # Plan + approval gate + changelog
 ├── session-log.md        # Append-only PM action log (audit trail)
 ├── tasks/
@@ -174,7 +178,7 @@ Each project gets this (created by `/ai-dev-init`, gitignored):
 │   └── roles.md          # Executor definitions
 ├── dependencies/
 │   └── graph.md          # DAG: which tasks block which
-├── discovery/            # Findings from discovery/preflight/deployment tasks
+├── discovery/            # Findings from discovery/preflight/deployment tasks (+ inventory.md from `aidev map`)
 ├── reports/
 │   └── delivery-001.md   # Written by subagent on task completion (incl. ## Conhecimento)
 ├── harness/              # Long-running harness (created by /ai-dev-harness, optionally tracked in git)
@@ -185,12 +189,9 @@ Each project gets this (created by `/ai-dev-init`, gitignored):
 │   ├── session-prompt.md # Identical prompt for every coding session
 │   ├── capabilities.md   # MCP servers, skills, verification ladder
 │   └── evidence/         # Screenshots and logs proving each passing feature
-└── knowledge/            # Knowledge — every mode, tracked in git, injected every session
-    ├── map.generated.md  # Inventory from `aidev map`
-    ├── map.md            # Curated: modules ↔ features, where-to-look, invariants
-    ├── decisions.md      # ADR log
-    └── gotchas.md        # Symptom → cause → fix
 ```
+
+General knowledge (all projects) lives in this repo, in `knowledge/`.
 
 ---
 

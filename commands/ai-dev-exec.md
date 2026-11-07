@@ -79,7 +79,7 @@ Read ~/.claude/ai-dev/guidelines/karpathy-guidelines.md and follow it. Use the s
 Do not read anything else. Do not use context from this conversation.
 
 Execute the task. Stay within "## Outputs esperados" — do not modify files outside that list
-(.ai-dev/knowledge/ is always allowed).
+(knowledge sections of .ai-dev/context.md are always allowed — via `aidev learn` or the map section).
 
 When done:
   1. Write .ai-dev/reports/delivery-XXX.md following the template at
