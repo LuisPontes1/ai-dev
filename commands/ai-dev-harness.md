@@ -15,11 +15,13 @@ Read `~/.claude/ai-dev/harness.md` first. `aidev` = `node ~/.claude/ai-dev/harne
 2. If `.ai-dev/harness/features.lock.json` exists and `--amend` was not passed: stop —
    "Harness already initialized. Use `/ai-dev-session`, `/ai-dev-loop`, or `/ai-dev-harness --amend`."
 3. Ask the user ONE question (use AskUserQuestion if available):
-   "Track `.ai-dev/harness` and `.ai-dev/knowledge` in git? Recommended — otherwise a fresh clone or
-   cloud session starts with no memory." Apply the answer per `harness.md → Tracking the harness in git`.
+   "Track `.ai-dev/harness` in git (knowledge is already tracked)? Recommended — otherwise a fresh clone or
+   cloud session starts with no feature list or progress log." Apply the answer per `harness.md → Tracking the harness in git`.
 
 ## Step 1 — Feature list
 
+If the scope is still fuzzy, run `superpowers:brainstorming` with the user first (if installed) and write the
+outcome into the spec — the feature list is only as good as the spec.
 Load skill `ai-dev-feature-list`. Spawn ONE subagent (`opus`) with a prompt file
 `.ai-dev/harness/initializer-prompt.md` that says:
 

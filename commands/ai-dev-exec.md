@@ -74,13 +74,17 @@ Wait for user confirmation before continuing.
 
 Read .ai-dev/tasks/task-XXX.md.
 Read every file listed in "## Contexto necessário" and "## Inputs".
+Run `node ~/.claude/ai-dev/harness/aidev.mjs brief` and `... recall <2-4 key terms of the task>`.
+Read ~/.claude/ai-dev/guidelines/karpathy-guidelines.md and follow it. Use the skills listed under "## Skills".
 Do not read anything else. Do not use context from this conversation.
 
-Execute the task. Stay within "## Outputs esperados" — do not modify files outside that list.
+Execute the task. Stay within "## Outputs esperados" — do not modify files outside that list
+(.ai-dev/knowledge/ is always allowed).
 
 When done:
   1. Write .ai-dev/reports/delivery-XXX.md following the template at
-     ~/.claude/ai-dev/templates/reports/_template.md
+     ~/.claude/ai-dev/templates/reports/_template.md — fill "## Conhecimento" and record each item with
+     `aidev learn gotcha|decision|note` (`--global` for cross-project lessons)
   2. Set Status: done in the task file
   3. Update .ai-dev/agents/assignments.md with status, session ID, and completion date
   4. Append to .ai-dev/session-log.md: [timestamp] Subagent task-XXX completed. Status: done.
@@ -97,6 +101,9 @@ Do not communicate via chat — write everything to files.
 2. **Persona injection:** if the task has `Persona:` set to a value other than `none`:
    - Read `~/.claude/ai-dev/personas/<persona>.md`
    - Append the full persona content to the end of `.ai-dev/tasks/task-XXX-prompt.md` under a `---` separator
+   **Skills injection:** read `~/.claude/ai-dev/skills.md` and append a `## Skills` block with the skills that apply
+   to this task (e.g. `superpowers:test-driven-development` for `Persona: tdd`,
+   `superpowers:verification-before-completion` always for implementation tasks).
 3. Spawn an isolated subagent with the resolved model (`sonnet`, `opus`, or `haiku`).
    The subagent's prompt is: "Read and execute `.ai-dev/tasks/task-XXX-prompt.md`."
 
@@ -113,6 +120,9 @@ Read `~/.claude/ai-dev/execution.md` → Copilot section.
    - The acceptance criteria
    - Instruction to stay within the listed output files only
    - If persona is set: the full persona content appended at the end (since Copilot cannot read external files)
+   - The Karpathy guidelines (`~/.claude/ai-dev/guidelines/karpathy-guidelines.md`), inline
+   - The output of `aidev brief` plus `aidev recall <task terms>`, inline under "## Project knowledge"
+   - A 3–5 line summary of each applicable skill's rule (from `~/.claude/ai-dev/skills.md`)
 3. Determine the command flags (resolved model/effort — override takes precedence over task file):
    - `--model <model>` from `--model` override or Modelo (Copilot) field
    - `--effort <effort>` from `--effort` override or Effort field
@@ -213,7 +223,9 @@ Follow the dispatch flow from `~/.claude/ai-dev/execution.md` → Parallel execu
 After the task completes (any executor):
 
 1. Read `.ai-dev/reports/delivery-XXX.md`
-2. Check `## Impacto no plano`:
+2. **Knowledge:** for each item in `## Conhecimento` not already recorded (`aidev recall` it), run `aidev learn …`.
+   Copilot can't run `aidev`, so for copilot tasks the PM always does this step.
+3. Check `## Impacto no plano`:
    - If "None" → report result, show unblocked tasks, suggest next
    - If has findings → pause, show findings, ask user how to adjust the plan. Read `~/.claude/ai-dev/execution.md` → Feedback section.
 3. If the task failed:

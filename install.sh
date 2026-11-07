@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # install.sh — AI-Dev Planning System installer
 # Sets up ~/CLAUDE.md globally so every repo on this machine inherits planning-first behavior.
-# Usage: bash install.sh [--dry-run] [--with-mcp]
-#   --with-mcp   also register the Playwright MCP server (user scope) for end-to-end browser verification
+# Usage: bash install.sh [--dry-run] [--with-mcp] [--with-superpowers] [--no-hook]
+#   --with-mcp           also register the Playwright MCP server (user scope) for end-to-end browser verification
+#   --with-superpowers   also install the Superpowers skills plugin (obra/superpowers)
+#   --no-hook            do not add the SessionStart knowledge hook to ~/.claude/settings.json
 
 set -euo pipefail
 
@@ -13,6 +15,9 @@ CLAUDE_AIDEV_DIR="$HOME/.claude/ai-dev"
 COPILOT_PLUGIN_DIR="$HOME/.claude/plugins/ai-dev-copilot"
 CLAUDE_SKILLS_DIR="$HOME/.claude/skills"
 WITH_MCP=false
+WITH_SUPERPOWERS=false
+WITH_HOOK=true
+CLAUDE_SETTINGS="$HOME/.claude/settings.json"
 MARKER_START="<!-- ai-dev:start -->"
 MARKER_END="<!-- ai-dev:end -->"
 DRY_RUN=false
@@ -35,6 +40,8 @@ error()   { echo -e "${RED}[ai-dev]${NC} $*" >&2; }
 for arg in "$@"; do
   [[ "$arg" == "--dry-run" ]] && DRY_RUN=true
   [[ "$arg" == "--with-mcp" ]] && WITH_MCP=true
+  [[ "$arg" == "--with-superpowers" ]] && WITH_SUPERPOWERS=true
+  [[ "$arg" == "--no-hook" ]] && WITH_HOOK=false
 done
 $DRY_RUN && warn "DRY RUN — no files will be written"
 
@@ -93,7 +100,7 @@ install_protocol_files() {
   info "Installing on-demand protocol files to $CLAUDE_AIDEV_DIR"
   if ! $DRY_RUN; then
     mkdir -p "$CLAUDE_AIDEV_DIR"
-    for f in planning.md execution.md harness.md; do
+    for f in planning.md execution.md harness.md skills.md; do
       [[ -f "$src_dir/$f" ]] || { warn "  Missing: $src_dir/$f — skipping"; continue; }
       cp "$src_dir/$f" "$CLAUDE_AIDEV_DIR/$f"
       success "  Installed: ~/.claude/ai-dev/$f"
@@ -104,6 +111,13 @@ install_protocol_files() {
       mkdir -p "$CLAUDE_AIDEV_DIR/personas"
       cp "$src_dir/personas"/*.md "$CLAUDE_AIDEV_DIR/personas/" 2>/dev/null || true
       success "  Installed: ~/.claude/ai-dev/personas/ ($(ls "$src_dir/personas"/*.md 2>/dev/null | wc -l | tr -d ' ') personas)"
+    fi
+
+    # Install base coding guidelines (Karpathy)
+    if [[ -d "$src_dir/guidelines" ]]; then
+      mkdir -p "$CLAUDE_AIDEV_DIR/guidelines"
+      cp "$src_dir/guidelines"/*.md "$CLAUDE_AIDEV_DIR/guidelines/"
+      success "  Installed: ~/.claude/ai-dev/guidelines/ (Karpathy coding discipline)"
     fi
   else
     warn "  Would install: ~/.claude/ai-dev/planning.md"
@@ -281,7 +295,93 @@ install_mcp() {
   fi
 }
 
-# ── 10. Summary ───────────────────────────────────────────────────────────────
+# ── 10. Global knowledge (never overwritten) ────────────────────────────────
+install_global_knowledge() {
+  local src_dir="$SCRIPT_DIR/templates/knowledge-global"
+  local dest_dir="$CLAUDE_AIDEV_DIR/knowledge"
+  if $DRY_RUN; then
+    warn "  Would create (if missing): ~/.claude/ai-dev/knowledge/{learnings,gotchas}.md"
+    return
+  fi
+  mkdir -p "$dest_dir"
+  for f in "$src_dir"/*.md; do
+    [[ -f "$f" ]] || continue
+    if [[ -f "$dest_dir/$(basename "$f")" ]]; then
+      info "  Kept existing global knowledge: ~/.claude/ai-dev/knowledge/$(basename "$f")"
+    else
+      cp "$f" "$dest_dir/"
+      success "  Created global knowledge: ~/.claude/ai-dev/knowledge/$(basename "$f")"
+    fi
+  done
+}
+
+# ── 11. SessionStart hook → ~/.claude/settings.json ─────────────────────────
+# Injects the knowledge brief on startup, resume, /clear and after compaction.
+install_knowledge_hook() {
+  if ! $WITH_HOOK; then
+    info "Knowledge hook: skipped (--no-hook)"
+    return
+  fi
+  if $DRY_RUN; then
+    warn "  Would add SessionStart hook (aidev brief --hook) to ~/.claude/settings.json"
+    return
+  fi
+  if ! command -v node &>/dev/null; then
+    warn "  Node.js not found — knowledge hook not installed"
+    return
+  fi
+  mkdir -p "$(dirname "$CLAUDE_SETTINGS")"
+  [[ -f "$CLAUDE_SETTINGS" ]] && cp "$CLAUDE_SETTINGS" "$CLAUDE_SETTINGS.bak"
+  local rc=0
+  node - "$CLAUDE_SETTINGS" <<'EOF_NODE' || rc=$?
+const fs = require("fs");
+const file = process.argv[2];
+let settings = {};
+if (fs.existsSync(file)) {
+  const raw = fs.readFileSync(file, "utf8").trim();
+  if (raw) {
+    try { settings = JSON.parse(raw); }
+    catch (e) { console.error(`settings.json is not valid JSON (${e.message}) — hook not installed`); process.exit(3); }
+  }
+}
+// Ours = any command that runs aidev.mjs with "brief --hook" (however it is quoted).
+const isOurs = (h) => /aidev\.mjs\W*\s+brief\s+--hook/.test(String(h.command ?? ""));
+settings.hooks ??= {};
+const groups = (settings.hooks.SessionStart ?? [])
+  .map((g) => ({ ...g, hooks: (g.hooks ?? []).filter((h) => !isOurs(h)) }))
+  .filter((g) => g.hooks.length > 0);
+groups.push({
+  matcher: "startup|resume|clear|compact",
+  hooks: [{ type: "command", command: 'node "$HOME/.claude/ai-dev/harness/aidev.mjs" brief --hook', timeout: 10 }],
+});
+settings.hooks.SessionStart = groups;
+fs.writeFileSync(file, JSON.stringify(settings, null, 2) + "\n");
+EOF_NODE
+  if [[ $rc -eq 0 ]]; then
+    success "  Installed SessionStart knowledge hook (startup|resume|clear|compact) in ~/.claude/settings.json"
+  else
+    warn "  Could not update ~/.claude/settings.json — see docs/knowledge-and-skills.md to add the hook by hand"
+  fi
+}
+
+# ── 12. Superpowers plugin (opt-in) ─────────────────────────────────────────
+install_superpowers() {
+  if ! $WITH_SUPERPOWERS; then
+    info "Superpowers: skipped (pass --with-superpowers, or in Claude Code: /plugin install superpowers@claude-plugins-official)"
+    return
+  fi
+  if $DRY_RUN; then
+    warn "  Would run: claude plugin install superpowers@claude-plugins-official"
+    return
+  fi
+  if command -v claude &>/dev/null && claude plugin install superpowers@claude-plugins-official 2>/dev/null; then
+    success "  Installed Superpowers plugin"
+  else
+    warn "  Install Superpowers from inside Claude Code: /plugin install superpowers@claude-plugins-official"
+  fi
+}
+
+# ── 13. Summary ───────────────────────────────────────────────────────────────
 print_summary() {
   echo ""
   echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -295,6 +395,9 @@ print_summary() {
   echo "  ~/.claude/ai-dev/templates/          — starters, task/agent/report, harness + knowledge templates"
   echo "  ~/.claude/ai-dev/harness/aidev.mjs   — long-running harness CLI (features, progress, knowledge map)"
   echo "  ~/.claude/skills/ai-dev-*            — long-run session, feature list, e2e verification, knowledge map"
+  echo "  ~/.claude/ai-dev/knowledge/          — global memory (learnings, gotchas) — never overwritten"
+  echo "  ~/.claude/settings.json              — SessionStart hook: knowledge brief every session + after compaction"
+  echo "  ~/.claude/ai-dev/guidelines/         — Karpathy coding discipline (all subagents + Copilot prompts)"
   echo "  ~/.claude/commands/                  — /ai-dev-init, /ai-dev-exec, /ai-dev-harness, /ai-dev-loop, ..."
   echo "  ~/.claude/plugins/ai-dev-copilot/    — Copilot plugin + SDK"
   echo "  ~/.claude/commands/copilot/          — /copilot:setup, /copilot:review, ..."
@@ -321,4 +424,7 @@ install_copilot_plugin
 install_harness
 install_skills
 install_mcp
+install_global_knowledge
+install_knowledge_hook
+install_superpowers
 print_summary

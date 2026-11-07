@@ -49,6 +49,16 @@
 [Descobertas que alteram tasks futuras — schemas diferentes do esperado, dependências novas,
  restrições encontradas, decisões que precisam ser revisadas. Se nenhum impacto, escreva "None."]
 
+## Conhecimento
+
+<!-- O que a próxima sessão precisa saber e não está no código. Cada item também vai para
+     `aidev learn` (gotcha | decision | note; --global se vale para outros projetos).
+     Se nada, escreva "None." -->
+
+- **Gotcha:** [sintoma] → [causa] → [correção]
+- **Decisão:** [decisão] — [por quê] — [alternativa rejeitada]
+- **Mapa:** [módulo/arquivo novo ou movido — já atualizado em .ai-dev/knowledge/map.md?]
+
 ## Observações
 
 [Qualquer coisa relevante para a próxima task ou para o time — edge cases, issues observados, sugestões]

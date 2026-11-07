@@ -2,6 +2,13 @@
 
 > Loaded by PM when planning or reviewing tasks.
 
+## Before proposing tasks
+
+- If the request is fuzzy, run `superpowers:brainstorming` (if installed) with the user and write the outcome
+  into `.ai-dev/context.md`. Skip when the request is already precise.
+- `aidev recall <terms>` — earlier decisions and gotchas often change the plan.
+- Assign skills per task from `~/.claude/ai-dev/skills.md` (`## Skills` section of the task file).
+
 ## Atomicity — enforce before adding any task to the plan
 
 A task is atomic when ALL are true:

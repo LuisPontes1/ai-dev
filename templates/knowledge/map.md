@@ -19,7 +19,7 @@
 
 | Question | Answer |
 |----------|--------|
-| How do I run it? | `.ai-dev/harness/init.sh` |
+| How do I run it? | [command, or `.ai-dev/harness/init.sh` in harness mode] |
 | Where are routes defined? | `src/...` |
 | Where are the e2e helpers? | `tests/e2e/...` |
 

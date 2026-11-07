@@ -28,11 +28,16 @@ Known blind spots: browser-native `alert()`/`confirm()` dialogs are not visible 
 
 | Situation | Skill |
 |-----------|-------|
-| Every coding session | `ai-dev-long-run-session` |
-| Verifying a feature | `ai-dev-e2e-verification` |
-| Writing or amending features | `ai-dev-feature-list` |
+| Every coding session | `ai-dev-long-run-session` + Karpathy guidelines |
+| Verifying a feature | `ai-dev-e2e-verification` + `superpowers:verification-before-completion` |
+| Smoke test / feature broken | `superpowers:systematic-debugging` |
+| `verify: unit` or `api` features | `superpowers:test-driven-development` |
+| Writing or amending features | `ai-dev-feature-list` (+ `superpowers:brainstorming` for fuzzy scope) |
 | Updating the knowledge map | `ai-dev-knowledge-map` |
+| A gotcha repeated in 2+ sessions | `superpowers:writing-skills` → new project skill, add it here |
 | [project-specific] | [skill name] |
+
+Superpowers installed: [yes / no — without it, follow the ai-dev equivalent in `~/.claude/ai-dev/skills.md`]
 
 ## Personas by category
 

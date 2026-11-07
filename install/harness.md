@@ -113,8 +113,8 @@ the candidate features have disjoint `touches`; each runs in a worktree, merge s
 
 ## Tracking the harness in git
 
-`.ai-dev/` is gitignored by default (plan mode is personal). The harness only works across
-machines and cloud sessions if its notes survive, so `/ai-dev-harness` asks once:
+`/ai-dev-init` already tracks `.ai-dev/knowledge/` (`.ai-dev/*` + `!.ai-dev/knowledge/`). The harness only works
+across machines and cloud sessions if its notes survive too, so `/ai-dev-harness` asks once:
 
 - **Track (recommended for harness):** replace `.ai-dev/` in `.gitignore` with
   ```

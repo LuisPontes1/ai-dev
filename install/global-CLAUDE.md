@@ -22,7 +22,11 @@ On every session start:
    - `.ai-dev/dependencies/graph.md`
    - `.ai-dev/session-log.md` (last 5 entries only)
 
-3. If `.ai-dev/harness/` exists (**harness mode** — long-running build), also run/read:
+3. **Knowledge brief.** The SessionStart hook injects "## ai-dev knowledge brief" (project map, gotchas,
+   decisions, global learnings). If it is not in your context, run `node ~/.claude/ai-dev/harness/aidev.mjs brief`.
+   If `.ai-dev/knowledge/map.md` is missing, offer `/ai-dev-knowledge`.
+
+4. If `.ai-dev/harness/` exists (**harness mode** — long-running build), also run/read:
    - `node ~/.claude/ai-dev/harness/aidev.mjs status`
    - `node ~/.claude/ai-dev/harness/aidev.mjs progress tail -n 2`
    - `git log --oneline -5`
@@ -88,13 +92,19 @@ When executing manually or when `/ai-dev-exec` is not available:
 ```
 Read .ai-dev/tasks/task-XXX.md.
 Read every file listed in "## Contexto necessário" and "## Inputs".
+Run `node ~/.claude/ai-dev/harness/aidev.mjs brief` and `aidev recall <2-4 key terms of the task>` —
+earlier sessions' map, gotchas and decisions. Use them; verify against the code before relying on a detail.
+Read ~/.claude/ai-dev/guidelines/karpathy-guidelines.md and follow it.
 Do not read anything else. Do not use context from this conversation.
 
-Execute the task. Stay within "## Outputs esperados" — do not modify files outside that list.
+Execute the task. Stay within "## Outputs esperados" — do not modify files outside that list
+(.ai-dev/knowledge/ is always allowed).
 
 When done:
   1. Write .ai-dev/reports/delivery-XXX.md following the template at
-     ~/.claude/ai-dev/templates/reports/_template.md
+     ~/.claude/ai-dev/templates/reports/_template.md — including "## Conhecimento".
+     Record each learning with `aidev learn gotcha|decision|note` (add --global for cross-project lessons),
+     and update .ai-dev/knowledge/map.md if you changed where things live.
   2. Set Status: done in the task file
   3. Update .ai-dev/agents/assignments.md with status, session ID, and completion date
   4. Append to .ai-dev/session-log.md: [timestamp] Subagent task-XXX completed. Status: done.
@@ -109,6 +119,8 @@ Do not communicate via chat — write everything to files.
 ```
 
 2. If the task has `Persona:` ≠ `none`: read `~/.claude/ai-dev/personas/<persona>.md` and append it to the prompt file under a `---` separator. For `copilot` executor, inline the persona content since Copilot cannot read external files.
+   Append a `## Skills` block naming the skills that apply to this task (see `~/.claude/ai-dev/skills.md`).
+   For `copilot`: also inline the Karpathy guidelines and the output of `aidev brief` — Copilot cannot read them.
 
 3. Dispatch by executor:
    - **claude-code:** spawn isolated subagent → "Read and execute `.ai-dev/tasks/task-XXX-prompt.md`."
@@ -139,6 +151,26 @@ Load these files **only when the trigger occurs** — never preemptively:
 | Plan changes after approval | `~/.claude/ai-dev/execution.md` → Changelog section |
 | Task needs credentials/external access | `~/.claude/ai-dev/execution.md` → Credentials section |
 | `.ai-dev/harness/` exists, or user wants a long build / many features | `~/.claude/ai-dev/harness.md` |
+| Planning, writing a subagent prompt, or a bug/review/finish moment | `~/.claude/ai-dev/skills.md` (Superpowers + Karpathy routing) |
+
+---
+
+## Knowledge — always on
+
+Knowledge is what makes session N+1 better than session N. It lives in files and is loaded automatically.
+
+- **Load:** the SessionStart hook injects the brief at startup, resume, `/clear` and after compaction.
+  Before touching an area, `aidev recall <terms>` — cheaper than re-reading the codebase.
+- **Capture — the moment it happens, not at the end:**
+  - lost >10 min to something → `aidev learn gotcha --symptom … --cause … --fix …`
+  - made a choice a later session could undo → `aidev learn decision --decision … --why … --rejected …`
+  - lesson about the user, a tool or a platform that applies beyond this repo → `aidev learn note --global --learning …`
+  - moved/added modules → update `.ai-dev/knowledge/map.md` in the same commit
+- **Promote:** delivery reports' `## Conhecimento` → PM records anything the subagent didn't. A gotcha or procedure
+  seen in ≥ 2 sessions → propose turning it into a project skill (`.claude/skills/`).
+- **Keep it true:** `aidev map --check` finds stale paths; delete rows that stopped being true.
+- `.ai-dev/knowledge/` is tracked in git (it has no secrets — never write values, only names). Global memory lives in
+  `~/.claude/ai-dev/knowledge/`.
 
 ---
 

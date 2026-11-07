@@ -84,6 +84,15 @@ Updated: YYYY-MM-DD
 
 ---
 
+## Skills
+
+<!-- Preenchido pelo PM a partir de ~/.claude/ai-dev/skills.md. Diretrizes Karpathy sempre se aplicam.
+     Ex.: superpowers:test-driven-development — persona tdd -->
+
+- [skill] — [por quê]
+
+---
+
 ## Dependências
 
 - Requer: `task-000` (status: done)
@@ -98,6 +107,10 @@ Updated: YYYY-MM-DD
 - [ ] [critério específico e testável]
 - [ ] [critério específico e testável]
 - [ ] Testes existentes ainda passam
+
+<!-- Goal-driven (Karpathy): cada passo termina numa verificação concreta.
+     1. [passo] → verificar: [comando/observação]
+     2. [passo] → verificar: [comando/observação] -->
 
 ---
 

@@ -13,6 +13,7 @@ import {
 } from "./lib/features.mjs";
 import { appendEntry, tail } from "./lib/progress.mjs";
 import { checkMap, renderGenerated, scan } from "./lib/knowledge.mjs";
+import { brief, globalKnowledgeDir, learn, recall } from "./lib/memory.mjs";
 
 const USAGE = `aidev — ai-dev long-running harness
 
@@ -36,6 +37,14 @@ Progress log (.ai-dev/harness/progress.md):
 Knowledge map (.ai-dev/knowledge/):
   aidev map [--depth 2]                 regenerate map.generated.md
   aidev map --check                     report stale paths / uncovered modules in map.md
+
+Memory (always on — project .ai-dev/knowledge/ + global ~/.claude/ai-dev/knowledge/):
+  aidev brief [--max-chars 9000]        compact knowledge digest (what the SessionStart hook injects)
+  aidev brief --hook                    hook mode: reads hook JSON on stdin, prints additionalContext
+  aidev recall <terms...> [--limit 8]   ranked search across knowledge, progress and delivery reports
+  aidev learn gotcha   --symptom <s> --fix <f> [--cause <c>] [--source <s>] [--global]
+  aidev learn decision --decision <d> --why <w> [--rejected <r>] [--source <s>]
+  aidev learn note     --learning <l> [--applies <scope>] [--source <s>] [--global]
 
 Health:
   aidev doctor [--json]                 everything the PM checks after a session
@@ -219,6 +228,70 @@ function cmdDoctor(root, p, flags) {
   if (!allOk) process.exitCode = 1;
 }
 
+// Walk up from dir to the nearest folder that has .ai-dev/ (the user may open a subfolder).
+function findProjectRoot(dir) {
+  let cur = path.resolve(dir);
+  for (;;) {
+    if (fs.existsSync(path.join(cur, ".ai-dev"))) return cur;
+    const parent = path.dirname(cur);
+    if (parent === cur) return null;
+    cur = parent;
+  }
+}
+
+function harnessDigest(p) {
+  if (!fs.existsSync(p.features)) return { status: null, tail: "" };
+  try {
+    const s = summarize(loadFeatures(p.features));
+    const status = `Features ${s.passing}/${s.total} passing · blocked ${s.blocked} · next: ${s.next ? `${s.next.id} — ${s.next.description}` : "none"}`;
+    return { status, tail: fs.existsSync(p.progress) ? tail(fs.readFileSync(p.progress, "utf8"), 1) : "" };
+  } catch (err) {
+    return { status: `features.json unreadable: ${err.message}`, tail: "" };
+  }
+}
+
+function cmdBrief(rootArg, flags) {
+  let cwd = rootArg;
+  let source = "manual";
+  if (flags.hook) {
+    // Hook contract: JSON on stdin with cwd + source; stay silent when ai-dev is OFF.
+    if (!fs.existsSync(path.join(path.dirname(globalKnowledgeDir()), "enabled"))) return;
+    if (!process.stdin.isTTY) {
+      try {
+        const input = JSON.parse(fs.readFileSync(0, "utf8") || "{}");
+        cwd = input.cwd || process.env.CLAUDE_PROJECT_DIR || cwd;
+        source = input.source || source;
+      } catch { /* no/invalid stdin — keep cwd */ }
+    }
+  }
+  const root = findProjectRoot(cwd) || cwd;
+  const h = harnessDigest(harnessPaths(root));
+  let text = brief(root, { maxChars: Number(flags["max-chars"] || 9000), harnessStatus: h.status, progressTail: h.tail });
+  if (flags.hook) {
+    if (!text) return;
+    if (source === "compact") text = `(Re-injected after context compaction.)\n${text}`;
+    process.stdout.write(`${JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: text } })}\n`);
+    return;
+  }
+  out(null, false, text || "(no knowledge yet — run /ai-dev-knowledge, or record with `aidev learn`)");
+}
+
+function cmdRecall(root, positional, flags) {
+  const query = positional.slice(1).join(" ");
+  if (!query) throw new Error("usage: aidev recall <terms...>");
+  const hits = recall(findProjectRoot(root) || root, query, { limit: Number(flags.limit || 8) });
+  if (flags.json) return out(hits, true);
+  if (!hits.length) return out(null, false, `no matches for "${query}"`);
+  out(null, false, hits.map((h) => `[${h.scope}] ${path.relative(root, h.file) || h.file}:${h.line}\n${h.header ? `${h.header.trim()}\n` : ""}${h.text}`).join("\n\n"));
+}
+
+function cmdLearn(root, positional, flags) {
+  const kind = positional[1];
+  const values = Object.fromEntries(Object.entries(flags).filter(([, v]) => v !== true));
+  const r = learn(findProjectRoot(root) || root, kind, values, { global: Boolean(flags.global) });
+  out(null, false, r.duplicate ? `learn: already recorded in ${r.file}` : `learn: ${kind} → ${r.file}`);
+}
+
 export function main(argv = process.argv.slice(2)) {
   const { positional, flags } = parseArgs(argv);
   const root = path.resolve(flags.root && flags.root !== true ? flags.root : process.cwd());
@@ -250,6 +323,9 @@ export function main(argv = process.argv.slice(2)) {
     case "progress": return cmdProgress(p, positional, flags);
     case "map": return cmdMap(root, p, flags);
     case "doctor": return cmdDoctor(root, p, flags);
+    case "brief": return cmdBrief(root, flags);
+    case "recall": return cmdRecall(root, positional, flags);
+    case "learn": return cmdLearn(root, positional, flags);
     case undefined:
     case "help":
     case "--help":

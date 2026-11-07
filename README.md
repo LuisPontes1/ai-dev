@@ -2,7 +2,8 @@
 
 > Planning-first development for Claude Code + GitHub Copilot.
 > You talk to the chat. Agents do the work. Files carry the context.
-> **New:** a long-running harness that keeps agents building for hours — one verified feature per session.
+> **New:** a long-running harness that keeps agents building for hours — one verified feature per session —
+> and **knowledge that persists between sessions** and is injected into every one, plus Superpowers + Karpathy skills.
 
 ---
 
@@ -62,12 +63,30 @@ What makes it hold over many sessions is structure, not prompting: a frozen feat
 
 ---
 
+## Knowledge that survives sessions — and is always used
+
+```
+.ai-dev/knowledge/            (tracked in git)        ~/.claude/ai-dev/knowledge/   (all projects)
+  map.md · decisions.md · gotchas.md                    learnings.md · gotchas.md
+              └──────────── SessionStart hook: startup · resume · /clear · after compaction ───────────┘
+                                   → "## ai-dev knowledge brief" in context, every time
+```
+
+- **Load** automatically (hook) · **recall** with `aidev recall <terms>` · **capture** with `aidev learn gotcha|decision|note [--global]` · **promote** repeated knowledge into project skills
+- Every subagent starts with `aidev brief` + `recall`; every delivery report has a `## Conhecimento` section the PM records
+- **Karpathy guidelines** (bundled) are the baseline discipline for every subagent and Copilot prompt
+- **Superpowers** (optional plugin) skills are routed by moment: brainstorming before planning, systematic-debugging on failures, verification-before-completion before "done", TDD, code review, writing-skills to promote knowledge
+
+Full guide: [docs/knowledge-and-skills.md](docs/knowledge-and-skills.md).
+
+---
+
 ## Install
 
 ```bash
 git clone git@github.com:LuisPontes1/ai-dev.git
 cd ai-dev
-bash install.sh        # --dry-run to preview · --with-mcp to register Playwright MCP
+bash install.sh        # --dry-run · --with-mcp (Playwright MCP) · --with-superpowers · --no-hook
 ```
 
 **What gets installed:**
@@ -86,6 +105,11 @@ bash install.sh        # --dry-run to preview · --with-mcp to register Playwrig
 | Harness CLI | `~/.claude/ai-dev/harness/aidev.mjs` | Feature list, guard, progress log, knowledge map (zero deps) |
 | Skills | `~/.claude/skills/ai-dev-*` | Long-run session, feature list, e2e verification, knowledge map |
 | MCP (opt-in) | user scope | Playwright MCP for browser verification (`--with-mcp`) |
+| Knowledge hook | `~/.claude/settings.json` | SessionStart: injects the knowledge brief every session and after compaction |
+| Global memory | `~/.claude/ai-dev/knowledge/` | Cross-project learnings and gotchas (never overwritten) |
+| Guidelines | `~/.claude/ai-dev/guidelines/` | Karpathy coding discipline |
+| Skills routing | `~/.claude/ai-dev/skills.md` | When to use which ai-dev / Superpowers skill |
+| Superpowers (opt-in) | Claude Code plugin | `--with-superpowers` |
 
 The installer includes the Copilot plugin with `@github/copilot-sdk` — no separate installation needed. Requires Node.js >= 18.18 and `gh auth login` for GitHub authentication.
 
@@ -152,7 +176,7 @@ Each project gets this (created by `/ai-dev-init`, gitignored):
 │   └── graph.md          # DAG: which tasks block which
 ├── discovery/            # Findings from discovery/preflight/deployment tasks
 ├── reports/
-│   └── delivery-001.md   # Written by subagent on task completion
+│   └── delivery-001.md   # Written by subagent on task completion (incl. ## Conhecimento)
 ├── harness/              # Long-running harness (created by /ai-dev-harness, optionally tracked in git)
 │   ├── features.json     # Definition of done — all features start passes:false
 │   ├── features.lock.json# Frozen definitions; `aidev guard` detects edited/removed tests
@@ -161,7 +185,7 @@ Each project gets this (created by `/ai-dev-init`, gitignored):
 │   ├── session-prompt.md # Identical prompt for every coding session
 │   ├── capabilities.md   # MCP servers, skills, verification ladder
 │   └── evidence/         # Screenshots and logs proving each passing feature
-└── knowledge/            # Knowledge map
+└── knowledge/            # Knowledge — every mode, tracked in git, injected every session
     ├── map.generated.md  # Inventory from `aidev map`
     ├── map.md            # Curated: modules ↔ features, where-to-look, invariants
     ├── decisions.md      # ADR log
@@ -197,6 +221,7 @@ The `copilot` executor uses the integrated Copilot plugin (`@github/copilot-sdk`
 | [Copilot Plugin](docs/copilot-plugin.md) | Plugin reference: commands, models, effort levels |
 | [Databricks Example](docs/databricks-example.md) | End-to-end pipeline with Asset Bundle |
 | [Long-Running Harness](docs/long-running-harness.md) | Initializer + session chain, feature list, knowledge map, skills, MCP |
+| [Knowledge & Skills](docs/knowledge-and-skills.md) | Persistent memory (hook, recall, learn), Karpathy + Superpowers integration |
 
 ## Slash commands
 

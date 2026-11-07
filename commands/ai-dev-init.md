@@ -46,15 +46,29 @@ Empty file — preserves directory for discovery and deployment task outputs.
 **`.ai-dev/reports/.gitkeep`**
 Empty file — preserves directory for delivery reports.
 
+**`.ai-dev/knowledge/`** — always created (every mode)
+Copy `~/.claude/ai-dev/templates/knowledge/*.md` (map, decisions, gotchas), then run
+`node ~/.claude/ai-dev/harness/aidev.mjs map` to write `map.generated.md`. Fill the "One-paragraph architecture"
+and the module table in `map.md` from what you read in Step 1 — short, paths in backticks. Leave the rest for
+`/ai-dev-knowledge`.
+
 **`.ai-dev/session-log.md`**
 Copy the session-log template. Write the first entry:
 `[current date HH:MM] .ai-dev/ initialized by /ai-dev-init.`
 
 ## Step 3 — Update ignore file
 
-- If `.gitignore` exists: append `.ai-dev/`
-- If `.databricksignore` exists: append `.ai-dev/` there too
-- If neither exists: create `.gitignore` with `.ai-dev/`
+Keep plan files local but **track the knowledge** so it survives clones, machines and cloud sessions:
+
+```
+.ai-dev/*
+!.ai-dev/knowledge/
+```
+
+- If `.gitignore` exists: append those lines (if it already has a bare `.ai-dev/` line, replace it — a bare
+  directory ignore cannot be re-included)
+- If `.databricksignore` exists: append `.ai-dev/` there (knowledge doesn't need to be deployed)
+- If neither exists: create `.gitignore` with those lines
 
 ## Step 4 — Report to user
 
@@ -63,6 +77,7 @@ Show:
 2. List of files created
 3. Sections of `context.md` that need manual review (all `[TODO]` markers)
 4. "Execution is blocked until `plan.md` Status is changed to `approved`"
+4b. "Knowledge map seeded in `.ai-dev/knowledge/` (tracked in git) — it is injected into every session automatically."
 5. Next step suggestion: "Review `.ai-dev/context.md` — especially the `[TODO]` sections — then describe what you want to build and I'll draft the tasks."
 
 ## What NOT to do
