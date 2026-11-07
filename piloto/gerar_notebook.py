@@ -476,7 +476,7 @@ def render_short(c, idx):
     legendas_curtas(ini, fim, srt)
     w = int(ALTURA * 9 / 16) // 2 * 2
     x = int((LARGURA - w) * CROP_X)
-    estilo = "FontName=DejaVu Sans,FontSize=13,Bold=1,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV=70"
+    estilo = "FontName=Liberation Sans,FontSize=14,Bold=1,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,BorderStyle=1,Outline=2.5,Shadow=0,Alignment=2,MarginV=95"   # Liberation Sans existe no Colab; sem ela cai na "Humor Sans"
     destino = SAIDA / f"short_{idx:02d}_{nome_arquivo(c.titulo)}.mp4"
     vf = f"crop={w}:{ALTURA}:{x}:0,scale=1080:1920,subtitles='{esc(srt)}':force_style='{estilo}'"
     subprocess.run(["ffmpeg", "-y", "-v", "error", "-ss", f"{ini:.2f}", "-i", str(VIDEO), "-t", f"{fim-ini:.2f}",
