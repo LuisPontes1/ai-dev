@@ -15,6 +15,9 @@ import {
 import { appendEntry, tail } from "./lib/progress.mjs";
 import { checkMap, renderGenerated, scan } from "./lib/knowledge.mjs";
 import { aidevHome, brief, globalKnowledgeDir, learn, recall } from "./lib/memory.mjs";
+import {
+  HANDOFF_FIELDS, checkpoint, compactionInstructions, handoffPath, readHandoff, recordSummary, restoreBlock, setHandoff,
+} from "./lib/session.mjs";
 
 const USAGE = `aidev — ai-dev long-running harness
 
@@ -49,6 +52,15 @@ Knowledge (project = .ai-dev/ · general = <ai-dev repo>/knowledge/):
                      project → .ai-dev/context.md (Gotchas · Decisões de arquitetura · Aprendizados)
                      --global → ai-dev repo knowledge/ (gotchas.md · learnings.md)
   aidev sync [--no-push]                commit general knowledge in the ai-dev repo, pull --rebase, push
+
+Session state & compaction (.ai-dev/handoff.md · plan.md · session-log.md):
+  aidev handoff [show]                  print the live handoff
+  aidev handoff set [--modo] [--foco] [--fazendo] [--proximo] [--aguardando] [--persona] [--decisoes] [--notas]
+  aidev checkpoint                      refresh the automatic snapshot in handoff.md now
+  aidev compact pre --hook              PreCompact: checkpoint + instructions for the summarizer (stdout)
+  aidev compact post --hook             PostCompact: store the summary, flag what it dropped
+  aidev brief --hook                    SessionStart (restores role/persona/handoff/plan/log + knowledge)
+                                        and SubagentStart (knowledge for subagents)
 
 Health:
   aidev doctor [--json]                 everything the PM checks after a session
@@ -256,30 +268,95 @@ function harnessDigest(p) {
   }
 }
 
+// Hooks get JSON on stdin; they must never break the session, and stay silent when ai-dev is OFF.
+function readHookInput() {
+  if (process.stdin.isTTY) return {};
+  try {
+    return JSON.parse(fs.readFileSync(0, "utf8") || "{}");
+  } catch {
+    return {};
+  }
+}
+
+const HOOK_BUDGET = 9500; // Claude Code caps hook context at 10,000 chars
+
 function cmdBrief(rootArg, flags) {
   let cwd = rootArg;
   let source = "manual";
+  let event = "SessionStart";
   if (flags.hook) {
-    // Hook contract: JSON on stdin with cwd + source; stay silent when ai-dev is OFF.
     if (!fs.existsSync(path.join(aidevHome(), "enabled"))) return;
-    if (!process.stdin.isTTY) {
-      try {
-        const input = JSON.parse(fs.readFileSync(0, "utf8") || "{}");
-        cwd = input.cwd || process.env.CLAUDE_PROJECT_DIR || cwd;
-        source = input.source || source;
-      } catch { /* no/invalid stdin — keep cwd */ }
-    }
+    const input = readHookInput();
+    cwd = input.cwd || process.env.CLAUDE_PROJECT_DIR || cwd;
+    source = input.source || "startup";
+    event = input.hook_event_name || "SessionStart";
   }
-  const root = findProjectRoot(cwd) || cwd;
-  const h = harnessDigest(harnessPaths(root));
-  let text = brief(root, { maxChars: Number(flags["max-chars"] || 9000), harnessStatus: h.status, progressTail: h.tail });
-  if (flags.hook) {
-    if (!text) return;
-    if (source === "compact") text = `(Re-injected after context compaction.)\n${text}`;
-    process.stdout.write(`${JSON.stringify({ hookSpecificOutput: { hookEventName: "SessionStart", additionalContext: text } })}\n`);
+  const root = findProjectRoot(cwd);
+  if (!root) {
+    if (!flags.hook) out(null, false, "(no .ai-dev/ here — run /ai-dev-init)");
     return;
   }
-  out(null, false, text || "(no knowledge yet — fill .ai-dev/context.md (/ai-dev-knowledge), or record with `aidev learn`)");
+  const h = harnessDigest(harnessPaths(root));
+  const max = Number(flags["max-chars"] || HOOK_BUDGET);
+  let text;
+  if (event === "SubagentStart") {
+    const head = [
+      "## ai-dev — contexto para subagente",
+      "Você é um subagente do ai-dev: siga o prompt/arquivo de task que recebeu, fique dentro dos outputs dele, escreva resultados em arquivos. Não aja como PM e não peça aprovações.",
+      "Disciplina: ~/.claude/ai-dev/guidelines/karpathy-guidelines.md. Aprendeu algo? `node ~/.claude/ai-dev/harness/aidev.mjs learn gotcha|decision|note`.",
+    ].join("\n");
+    text = [head, brief(root, { maxChars: Math.min(max, 6000) - head.length, harnessStatus: h.status })].filter(Boolean).join("\n\n");
+  } else {
+    const session = restoreBlock(root, source === "manual" ? "startup" : source);
+    const knowledge = brief(root, { maxChars: Math.max(2500, max - session.length - 200), harnessStatus: h.status, progressTail: h.tail });
+    text = [session && `## ai-dev — estado da sessão\n\n${session}`, knowledge].filter(Boolean).join("\n\n").slice(0, max);
+  }
+  if (flags.hook) {
+    if (!text.trim()) return;
+    process.stdout.write(`${JSON.stringify({ hookSpecificOutput: { hookEventName: event, additionalContext: text } })}\n`);
+    return;
+  }
+  out(null, false, text || "(nothing yet — fill .ai-dev/context.md (/ai-dev-knowledge), or record with `aidev learn`)");
+}
+
+function cmdHandoff(root, positional, flags) {
+  const proj = findProjectRoot(root);
+  if (!proj) throw new Error("No .ai-dev/ — run /ai-dev-init first");
+  if (positional[1] === "set") {
+    const values = Object.fromEntries(Object.entries(flags).filter(([k, v]) => v !== true && k !== "root"));
+    if (!Object.keys(values).length) throw new Error(`handoff set: pass at least one of ${HANDOFF_FIELDS.map(([f]) => `--${f}`).join(" ")}`);
+    setHandoff(proj, values);
+    return out(null, false, `handoff updated: ${Object.keys(values).join(", ")}`);
+  }
+  const { text } = readHandoff(proj);
+  out(null, false, text || `(no handoff yet — ${handoffPath(proj)} is created by \`aidev handoff set\` or the first compaction)`);
+}
+
+function cmdCheckpoint(root) {
+  const proj = findProjectRoot(root);
+  if (!proj) throw new Error("No .ai-dev/ — run /ai-dev-init first");
+  checkpoint(proj, { trigger: "manual-checkpoint" });
+  out(null, false, `checkpoint saved → ${handoffPath(proj)}`);
+}
+
+// PreCompact / PostCompact. Never block or fail compaction: errors are swallowed.
+function cmdCompact(positional, flags) {
+  const phase = positional[1];
+  if (!flags.hook) throw new Error("usage: aidev compact pre|post --hook   (reads the hook JSON on stdin)");
+  try {
+    if (!fs.existsSync(path.join(aidevHome(), "enabled"))) return;
+    const input = readHookInput();
+    const root = findProjectRoot(input.cwd || process.env.CLAUDE_PROJECT_DIR || process.cwd());
+    if (!root) return;
+    if (phase === "pre") {
+      const info = checkpoint(root, { trigger: input.trigger || "auto", transcriptPath: input.transcript_path });
+      process.stdout.write(`${compactionInstructions(root, info).slice(0, 9500)}\n`);
+    } else if (phase === "post") {
+      recordSummary(root, input.compact_summary || "");
+    }
+  } catch (err) {
+    process.stderr.write(`aidev compact ${phase}: ${err.message}\n`);
+  }
 }
 
 function cmdRecall(root, positional, flags) {
@@ -365,6 +442,9 @@ export function main(argv = process.argv.slice(2)) {
     case "recall": return cmdRecall(root, positional, flags);
     case "learn": return cmdLearn(root, positional, flags);
     case "sync": return cmdSync(flags);
+    case "handoff": return cmdHandoff(root, positional, flags);
+    case "checkpoint": return cmdCheckpoint(root);
+    case "compact": return cmdCompact(positional, flags);
     case undefined:
     case "help":
     case "--help":

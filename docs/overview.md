@@ -107,6 +107,12 @@ This means the PM operates with minimal context most of the time. When a deploym
 
 ## Session lifecycle
 
+### Session state and compaction
+
+`.ai-dev/handoff.md` holds the present (focus, next step, what awaits the user, active persona); hooks
+checkpoint it before every compaction, tell the summarizer what must survive, and restore the PM role, persona,
+handoff, plan and session log afterwards. See [knowledge-and-skills.md](knowledge-and-skills.md#session-state--compaction).
+
 ### Opening a session
 
 ```

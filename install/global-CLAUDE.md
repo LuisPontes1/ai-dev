@@ -21,6 +21,7 @@ On every session start:
    - `.ai-dev/agents/assignments.md`
    - `.ai-dev/dependencies/graph.md`
    - `.ai-dev/session-log.md` (last 5 entries only)
+   - `.ai-dev/handoff.md` — where the last session stopped (the hook already injects it; read it if not in context)
 
 3. **Knowledge brief.** The SessionStart hook injects "## ai-dev knowledge brief" — built from `.ai-dev/`
    (context.md map/decisions/invariants/gotchas, recent reports, discovery) and the ai-dev general knowledge.
@@ -92,8 +93,8 @@ When executing manually or when `/ai-dev-exec` is not available:
 ```
 Read .ai-dev/tasks/task-XXX.md.
 Read every file listed in "## Contexto necessário" and "## Inputs".
-Run `node ~/.claude/ai-dev/harness/aidev.mjs brief` and `aidev recall <2-4 key terms of the task>` —
-earlier sessions' map, gotchas and decisions. Use them; verify against the code before relying on a detail.
+If "## ai-dev — contexto para subagente" is not already in your context, run `node ~/.claude/ai-dev/harness/aidev.mjs brief`.
+Run `aidev recall <2-4 key terms of the task>` — earlier sessions' map, gotchas and decisions. Verify against the code.
 Read ~/.claude/ai-dev/guidelines/karpathy-guidelines.md and follow it.
 Do not read anything else. Do not use context from this conversation.
 
@@ -152,6 +153,31 @@ Load these files **only when the trigger occurs** — never preemptively:
 | Task needs credentials/external access | `~/.claude/ai-dev/execution.md` → Credentials section |
 | `.ai-dev/harness/` exists, or user wants a long build / many features | `~/.claude/ai-dev/harness.md` |
 | Planning, writing a subagent prompt, or a bug/review/finish moment | `~/.claude/ai-dev/skills.md` (Superpowers + Karpathy routing) |
+
+---
+
+## Session state & compaction — never lose the thread
+
+`.ai-dev/` holds the whole working state: `plan.md` + `tasks/` (what was agreed), `session-log.md` (what happened),
+`handoff.md` (where we are **now**), `context.md` (what we know). Hooks restore it; you keep it current.
+
+**Keep `handoff.md` current** — `aidev handoff set` (fields: `--modo --foco --fazendo --proximo --aguardando --persona --decisoes --notas`):
+- when the plan is approved or changes · before dispatching a task (`--foco task-XXX --persona <p> --fazendo …`)
+- after a task returns (`--proximo …`) · whenever you ask the user something (`--aguardando …`) and when it's answered
+- when the user changes direction or states a preference (`--notas`) · before ending the session
+One line per field; overwrite, don't append. The session-log is the history; the handoff is the present.
+
+**Compaction protocol** (automatic, installed hooks):
+1. `PreCompact` → snapshot into `handoff.md` (plan, tasks + personas, session-log, git, protocols/skills loaded,
+   the user's last messages verbatim) and instructions telling the summarizer what it must keep.
+2. `PostCompact` → the summary is stored in `handoff.md` and checked for role, focus and persona.
+3. `SessionStart(compact)` → "⚙️ Restauração" block: your PM role, the active persona's full text, protocols to re-read,
+   the handoff, the plan and the log — then the knowledge brief.
+
+**After a compaction** (you see "⚙️ Restauração (compact)"): trust that block and `handoff.md` over the summary;
+re-read the protocols it lists; if a persona is active, keep applying it; never treat something listed under
+"Aguardando usuário" as approved. Log `[timestamp] Resumed after compaction — focus: …`.
+Before a long operation or when the context is clearly large, run `aidev checkpoint` yourself.
 
 ---
 

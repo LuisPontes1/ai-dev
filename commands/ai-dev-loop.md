@@ -29,7 +29,8 @@ For i in 1..N:
 1. Preconditions from `/ai-dev-session` Step 1 (no confirmation prompt).
 2. With `--category`: write the next failing feature of that category into `.ai-dev/harness/next-override.txt`.
 3. Spawn the session subagent (foreground — the next session depends on this one's commit).
-4. Run the full post-session audit. One line per session to the user:
+4. `aidev handoff set --modo "harness loop i/N" --foco <feature> --proximo <next feature>` — so a compaction mid-loop
+   resumes the loop instead of restarting it. Run the full post-session audit. One line per session to the user:
    `[i/N] session 14 · F-031 ✅ · 32/120 passing`
 5. Check stop conditions. Every 10 sessions or when `aidev map --check` reports ≥ 3 stale paths,
    run one knowledge refresh session (`/ai-dev-knowledge` steps) — it does not count against the budget.

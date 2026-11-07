@@ -81,6 +81,18 @@ general:  ai-dev/knowledge/    learnings.md · gotchas.md — versioned here, ev
 - **Karpathy guidelines** (bundled) are the baseline discipline for every subagent and Copilot prompt
 - **Superpowers** (optional plugin) skills are routed by moment: brainstorming before planning, systematic-debugging on failures, verification-before-completion before "done", TDD, code review, writing-skills to promote knowledge
 
+### Compaction doesn't make the PM forget who it is
+
+`.ai-dev/` also carries the working state — `plan.md` + `tasks/`, `session-log.md` and **`handoff.md`** (where we
+are now: focus, next step, what awaits the user, active persona). Four hooks keep it across compactions:
+
+| Hook | Does |
+|------|------|
+| `PreCompact` | snapshot into `handoff.md` (plan, tasks + personas, log, git, loaded protocols, the user's last words) and **tells the summarizer what it must keep** — PM role, focus, persona, pending approvals |
+| `PostCompact` | stores the summary and flags what it dropped |
+| `SessionStart` (compact/resume/clear/startup) | restores **role → persona (full text) → protocols to re-read → handoff → plan → log → knowledge** |
+| `SubagentStart` | gives every subagent the project knowledge |
+
 Full guide: [docs/knowledge-and-skills.md](docs/knowledge-and-skills.md).
 
 ---
@@ -109,7 +121,7 @@ bash install.sh        # --dry-run · --with-mcp (Playwright MCP) · --with-supe
 | Harness CLI | `~/.claude/ai-dev/harness/aidev.mjs` | Feature list, guard, progress log, knowledge map (zero deps) |
 | Skills | `~/.claude/skills/ai-dev-*` | Long-run session, feature list, e2e verification, knowledge map |
 | MCP (opt-in) | user scope | Playwright MCP for browser verification (`--with-mcp`) |
-| Knowledge hook | `~/.claude/settings.json` | SessionStart: injects the knowledge brief every session and after compaction |
+| Hooks | `~/.claude/settings.json` | SessionStart · SubagentStart · PreCompact · PostCompact — session state, knowledge, compaction protocol |
 | General knowledge | `knowledge/` in this repo | Cross-project learnings and gotchas, versioned; installer points the CLI here |
 | Guidelines | `~/.claude/ai-dev/guidelines/` | Karpathy coding discipline |
 | Skills routing | `~/.claude/ai-dev/skills.md` | When to use which ai-dev / Superpowers skill |
@@ -170,6 +182,7 @@ Each project gets this (created by `/ai-dev-init`, gitignored):
 ├── context.md            # Project knowledge: stack, code map, decisions, invariants, gotchas, learnings, credentials (names)
 ├── plan.md               # Plan + approval gate + changelog
 ├── session-log.md        # Append-only PM action log (audit trail)
+├── handoff.md            # Live state: focus, next step, awaiting user, active persona (+ compaction snapshots)
 ├── tasks/
 │   ├── _template.md      # Task template with atomicity checklist
 │   └── task-001.md       # One file per task — subagent's only instruction

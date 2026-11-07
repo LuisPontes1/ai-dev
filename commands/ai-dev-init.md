@@ -53,6 +53,10 @@ refines it later. The starter already has the Invariantes, Gotchas and Aprendiza
 Then run `aidev recall <project type / main stack>` — the ai-dev general knowledge may already have lessons
 for this stack; mention them in the report.
 
+**`.ai-dev/handoff.md`**
+Copy from `~/.claude/ai-dev/templates/handoff.md` — the live state (focus, next step, what awaits the user,
+active persona). Restored automatically at session start and after every compaction.
+
 **`.ai-dev/session-log.md`**
 Copy the session-log template. Write the first entry:
 `[current date HH:MM] .ai-dev/ initialized by /ai-dev-init.`

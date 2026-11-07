@@ -328,14 +328,15 @@ install_general_knowledge() {
 }
 
 # ── 11. SessionStart hook → ~/.claude/settings.json ─────────────────────────
-# Injects the knowledge brief on startup, resume, /clear and after compaction.
+# SessionStart/SubagentStart inject session state + knowledge; PreCompact/PostCompact run the
+# compaction protocol (checkpoint to .ai-dev/handoff.md, summary instructions, summary check).
 install_knowledge_hook() {
   if ! $WITH_HOOK; then
     info "Knowledge hook: skipped (--no-hook)"
     return
   fi
   if $DRY_RUN; then
-    warn "  Would add SessionStart hook (aidev brief --hook) to ~/.claude/settings.json"
+    warn "  Would add hooks to ~/.claude/settings.json: SessionStart, SubagentStart (brief), PreCompact, PostCompact (compaction protocol)"
     return
   fi
   if ! command -v node &>/dev/null; then
@@ -356,21 +357,31 @@ if (fs.existsSync(file)) {
     catch (e) { console.error(`settings.json is not valid JSON (${e.message}) — hook not installed`); process.exit(3); }
   }
 }
-// Ours = any command that runs aidev.mjs with "brief --hook" (however it is quoted).
-const isOurs = (h) => /aidev\.mjs\W*\s+brief\s+--hook/.test(String(h.command ?? ""));
+// Ours = any command that runs aidev.mjs "brief --hook" or "compact … --hook" (however it is quoted).
+const isOurs = (h) => /aidev\.mjs\W*\s+(brief|compact\s+\w+)\s+--hook/.test(String(h.command ?? ""));
+const CLI = 'node "$HOME/.claude/ai-dev/harness/aidev.mjs"';
+const WANT = [
+  // knowledge + session state at start, resume, /clear and after compaction
+  { event: "SessionStart", matcher: "startup|resume|clear|compact", command: `${CLI} brief --hook` },
+  // knowledge for every subagent (Agent tool, teammates)
+  { event: "SubagentStart", command: `${CLI} brief --hook` },
+  // checkpoint + instructions for the summarizer
+  { event: "PreCompact", command: `${CLI} compact pre --hook` },
+  // store the summary, flag what it dropped
+  { event: "PostCompact", command: `${CLI} compact post --hook` },
+];
 settings.hooks ??= {};
-const groups = (settings.hooks.SessionStart ?? [])
-  .map((g) => ({ ...g, hooks: (g.hooks ?? []).filter((h) => !isOurs(h)) }))
-  .filter((g) => g.hooks.length > 0);
-groups.push({
-  matcher: "startup|resume|clear|compact",
-  hooks: [{ type: "command", command: 'node "$HOME/.claude/ai-dev/harness/aidev.mjs" brief --hook', timeout: 10 }],
-});
-settings.hooks.SessionStart = groups;
+for (const w of WANT) {
+  const groups = (settings.hooks[w.event] ?? [])
+    .map((g) => ({ ...g, hooks: (g.hooks ?? []).filter((h) => !isOurs(h)) }))
+    .filter((g) => g.hooks.length > 0);
+  groups.push({ ...(w.matcher ? { matcher: w.matcher } : {}), hooks: [{ type: "command", command: w.command, timeout: 15 }] });
+  settings.hooks[w.event] = groups;
+}
 fs.writeFileSync(file, JSON.stringify(settings, null, 2) + "\n");
 EOF_NODE
   if [[ $rc -eq 0 ]]; then
-    success "  Installed SessionStart knowledge hook (startup|resume|clear|compact) in ~/.claude/settings.json"
+    success "  Installed ai-dev hooks in ~/.claude/settings.json: SessionStart · SubagentStart · PreCompact · PostCompact"
   else
     warn "  Could not update ~/.claude/settings.json — see docs/knowledge-and-skills.md to add the hook by hand"
   fi
@@ -408,7 +419,7 @@ print_summary() {
   echo "  ~/.claude/ai-dev/harness/aidev.mjs   — aidev CLI (features, progress, map, brief/recall/learn/sync)"
   echo "  ~/.claude/skills/ai-dev-*            — long-run session, feature list, e2e verification, knowledge map"
   echo "  $SCRIPT_DIR/knowledge/  — general knowledge (all projects), versioned here; 'aidev sync' to share"
-  echo "  ~/.claude/settings.json              — SessionStart hook: knowledge brief every session + after compaction"
+  echo "  ~/.claude/settings.json              — hooks: session start/resume/compact restore · subagents · compaction protocol"
   echo "  ~/.claude/ai-dev/guidelines/         — Karpathy coding discipline (all subagents + Copilot prompts)"
   echo "  ~/.claude/commands/                  — /ai-dev-init, /ai-dev-exec, /ai-dev-harness, /ai-dev-loop, ..."
   echo "  ~/.claude/plugins/ai-dev-copilot/    — Copilot plugin + SDK"

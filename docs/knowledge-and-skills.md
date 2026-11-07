@@ -1,6 +1,6 @@
 # Knowledge & Skills
 
-> Knowledge that persists between sessions — in `.ai-dev/` for each project and in the ai-dev repo for all of
+> Session state and knowledge that persist between sessions and survive compaction. Knowledge — in `.ai-dev/` for each project and in the ai-dev repo for all of
 > them — loaded into every session automatically, plus the external skills (Superpowers, Karpathy) wired into
 > the right moments of ai-dev.
 
@@ -105,6 +105,53 @@ Ranked across `context.md`, `discovery/`, `reports/`, `tasks/`, `plan.md`, `sess
   }
 }
 ```
+
+---
+
+## Session state & compaction
+
+Knowledge is what the project knows. Session state is where the work **is**. Both live in `.ai-dev/`:
+
+| File | Role | Written by |
+|------|------|------------|
+| `plan.md` + `tasks/` | what was agreed; each task's status, executor, persona | PM |
+| `session-log.md` | append-only history of PM actions (and of compactions) | PM, hooks |
+| `handoff.md` → **Estado (PM)** | the present: modo, foco, fazendo, próximo passo, aguardando usuário, persona ativa, decisões, notas | PM via `aidev handoff set` |
+| `handoff.md` → **Snapshot automático** | plan + tasks/personas, session-log tail, git, protocols & skills loaded, the user's last messages verbatim | `PreCompact` hook / `aidev checkpoint` |
+| `handoff.md` → **Último resumo de compactação** | the summary Claude Code produced, plus what it dropped | `PostCompact` hook |
+| `harness/progress.md` | per-session handoff in harness mode | harness sessions |
+
+### The compaction protocol
+
+Compaction replaces the conversation with a summary. Left alone, the summary tends to keep *what was being
+coded* and drop *who the assistant is supposed to be*: the PM role, the approval gates, the task persona, the
+protocols that were read, and the exact words of the user. ai-dev closes that gap at three points:
+
+```
+PreCompact   ──▶ aidev compact pre --hook
+                  ├─ snapshot → .ai-dev/handoff.md, entry in session-log.md
+                  └─ stdout = instructions for the summarizer: keep ROLE, FOCUS, PERSONA, APPROVALS
+                     (never turn a pending question into an approval), USER'S WORDS, DECISIONS, FILES, PROTOCOLS
+PostCompact  ──▶ aidev compact post --hook
+                  └─ store the summary; check it kept role / focus / persona; record what it lost
+SessionStart ──▶ aidev brief --hook   (source = compact)
+   (compact)      └─ "⚙️ Restauração": PM role and rules · what the summary lost · protocols to re-read
+                     · handoff · active persona (full text) · plan · session log · user's last messages
+                     · then the knowledge brief            (all under Claude Code's 10k-char hook cap)
+```
+
+`resume` and `clear` get the same restoration; a fresh `startup` gets handoff, plan and log (the full PM rules
+come from `~/CLAUDE.md`). `SubagentStart` gives subagents the knowledge brief and tells them they are
+subagents, not the PM. All hooks are silent when ai-dev is OFF or there is no `.ai-dev/`, and never block or
+fail a compaction.
+
+### What the PM does
+
+- `aidev handoff set` at every milestone: plan approved, task dispatched (`--foco --persona --fazendo`), task
+  returned (`--proximo`), question asked (`--aguardando`), direction changed (`--notas`), session ending.
+- `aidev checkpoint` before a long operation.
+- After "⚙️ Restauração (compact)": trust it over the summary, re-read the listed protocols, keep the persona,
+  never treat "Aguardando usuário" as approved.
 
 ---
 

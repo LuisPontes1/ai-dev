@@ -104,7 +104,8 @@ Do not communicate via chat — write everything to files.
    **Skills injection:** read `~/.claude/ai-dev/skills.md` and append a `## Skills` block with the skills that apply
    to this task (e.g. `superpowers:test-driven-development` for `Persona: tdd`,
    `superpowers:verification-before-completion` always for implementation tasks).
-3. Spawn an isolated subagent with the resolved model (`sonnet`, `opus`, or `haiku`).
+3. `aidev handoff set --foco "task-XXX — <title>" --persona <persona|none> --fazendo "subagente <model> executando" --proximo "ler delivery-XXX"`
+   Spawn an isolated subagent with the resolved model (`sonnet`, `opus`, or `haiku`).
    The subagent's prompt is: "Read and execute `.ai-dev/tasks/task-XXX-prompt.md`."
 
 ### If executor is `copilot`:
@@ -234,7 +235,8 @@ After the task completes (any executor):
    - Read `~/.claude/ai-dev/execution.md` → Rollback section
    - Present options: retry, skip, adjust plan, stop
 4. Log to session-log.md
-5. Show updated project status
+5. `aidev handoff set --fazendo - --persona none --proximo "<next task or decision>" [--aguardando "<question to user>"]`
+6. Show updated project status
 
 ---
 
