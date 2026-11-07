@@ -31,6 +31,29 @@ Gravação do culto (1h30–3h)                         [Mac M5 Pro]
 
 ---
 
+## 1.1 Situação atual (levantamento no Drive, 2026-11-07)
+
+**Gravações:** arquivos `.mov` semanais (domingos), nome no padrão `AAAA-MM-DD HH-MM-SS.mov` (horário de início da gravação, ~10h40), **1,0–2,3 GB** cada, de jun/2026 até 01/11/2026. Cada culto em uma pasta própria.
+
+- Há **duplicatas** (mesmo culto, mesmo tamanho, em pastas diferentes — ex.: 06/09, 13/09, 20/09). O pipeline deve deduplicar por nome + tamanho.
+- Também existem: `Recap - Culto - 04-10-2026.mov` (de outra pessoa) e `2026-06-14 11h00 (culto).mov` / `2026-05-10 11h00 (culto).mov` (padrão de nome antigo).
+
+**Tentativa anterior (fev/2025):** `culto.mp4` (só áudio), `culto.txt` (transcrição, ~42 KB, sem timestamps) e `culto_16022024.pdf`. A pregação é sobre **Rute 1** (série em Rute). A transcrição mostra exatamente os problemas que o plano precisa resolver:
+
+| Problema | Exemplos reais em `culto.txt` | Solução no pipeline |
+|---|---|---|
+| Nomes bíblicos errados | "Ananelé" (Elimeleque), "Lofa" (Orfa), "Quemos" (Quemós), "reciclos de Ruth" (versículos de Rute) | Glossário no `initial_prompt` + revisão Haiku |
+| Palavras trocadas | "noas" (noras), "eleu" (e li) | Revisão Haiku |
+| Loops/alucinação do Whisper | "perdi a vida e perdi a vida e perdi a vida…", frase de Rute 1:8 repetida 3× | VAD + ina_segmenter, `condition_on_previous_text=False`, detector de repetição |
+| Lixo no fim (música/ruído) | "…tenhonorเดínhם aqui, no, na, em, não, quero…" | Transcrever só trechos de fala |
+| Sem timestamps | arquivo é texto corrido | Whisper com `word_timestamps` → JSON/SRT |
+
+Mesmo com erros, o conteúdo já mostra **bons candidatos a short** (frases citáveis): *"Não existe meritocracia no Reino de Cristo Jesus"*, *"A gente romantiza a travessia"*, *"O Evangelho é dois amputados que se reconhecem"*, *"Tem dores que nos unem"*.
+
+**Acesso no Mac:** instalar **Google Drive para desktop**; as gravações aparecem em `~/Library/CloudStorage/GoogleDrive-<email>/…`. Marcar a pasta do culto da semana como "disponível offline" antes de processar.
+
+---
+
 ## 2. Onde roda cada coisa
 
 | Parte | Onde | Por quê |
@@ -156,11 +179,13 @@ Para cada corte: início/fim, tipo, título sugerido, gancho (primeira frase), t
 
 ## 8. Decisões em aberto
 
-- [ ] Onde ficam as gravações hoje (live no YouTube / câmera / mesa de som / Drive)?
+- [x] Onde ficam as gravações? → **Google Drive** (ver 1.1)
 - [ ] Uma câmera ou várias? Áudio da mesa?
 - [ ] Você é dono/gerente do canal (OAuth)?
 - [ ] Quantos cultos/semana e meta de cortes + shorts publicados?
 - [ ] Quem aprova os cortes?
 - [ ] Qual Whisper está instalado hoje no Mac?
 - [ ] O pipeline mora neste repo (`ai-dev`) ou num repo próprio (ex.: `cortes-culto`)?
-- [ ] Gravação de teste disponível para a Fase 1?
+- [ ] Gravação de teste para a Fase 1 → sugestão: `2026-11-01 10-44-29.mov` (a mais recente)
+- [ ] O que é o PDF `culto_16022024.pdf` (esboço do sermão? boletim?) — pode virar insumo do contexto
+- [ ] Glossário inicial: nome da igreja, pastores, membros citados com frequência, série atual
