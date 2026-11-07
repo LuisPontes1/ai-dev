@@ -38,7 +38,7 @@ VIDEO_NOME = "2026-11-01 10-44-29.mov"   # nome do arquivo no Drive (busca em to
 
 # Glossário: ajuda o Whisper e o Haiku a acertar nomes. Quanto mais completo, melhor.
 GLOSSARIO = {
-    "igreja": "",                         # nome da igreja
+    "igreja": "Igreja Fonte",             # nome da igreja
     "pregadores": [],                     # ex.: ["Pr. Fulano", "Pra. Beltrana"]
     "pessoas_citadas": ["João Lucas", "Lourenço", "Ricardo", "Wagner"],
     "serie_atual": "",                    # ex.: "Série em Rute"
@@ -89,6 +89,18 @@ gpu = subprocess.run(["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"]
                      capture_output=True, text=True).stdout.strip() if shutil.which("nvidia-smi") else ""
 print("GPU:", gpu or "nenhuma (vai ser BEM mais lento — troque para T4)")
 DEVICE = "cuda" if gpu else "cpu"
+
+# O faster-whisper (CTranslate2) precisa das bibliotecas do CUDA 12; o Colab pode vir com CUDA 13.
+if DEVICE == "cuda":
+    import ctypes, ctypes.util, site
+    if not ctypes.util.find_library("cublas.so.12"):
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "nvidia-cublas-cu12", "nvidia-cudnn-cu12==9.*"], check=False)
+        for d in site.getsitepackages():
+            for lib in sorted(glob.glob(f"{d}/nvidia/cublas/lib/libcublas*.so.12")) + sorted(glob.glob(f"{d}/nvidia/cudnn/lib/libcudnn*.so.9")):
+                try:
+                    ctypes.CDLL(lib, mode=ctypes.RTLD_GLOBAL)
+                except OSError:
+                    pass
 ''')
 
 md("## 3. Localizar o vídeo e extrair o áudio")
