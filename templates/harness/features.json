@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "project": "[project name]",
+  "spec": ".ai-dev/context.md",
+  "features": [
+    {
+      "id": "F-001",
+      "category": "auth",
+      "priority": 1,
+      "description": "user can sign up",
+      "steps": ["open /signup", "submit form with a new email", "see the dashboard with the user's name"],
+      "verify": "browser",
+      "touches": ["src/auth/"],
+      "passes": false
+    },
+    {
+      "id": "F-002",
+      "category": "auth",
+      "priority": 2,
+      "description": "user can reset password",
+      "steps": ["open /reset", "submit email", "follow link from the mail log", "log in with the new password"],
+      "verify": "browser",
+      "touches": ["src/auth/"],
+      "passes": false
+    }
+  ]
+}

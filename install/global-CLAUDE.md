@@ -22,6 +22,13 @@ On every session start:
    - `.ai-dev/dependencies/graph.md`
    - `.ai-dev/session-log.md` (last 5 entries only)
 
+3. If `.ai-dev/harness/` exists (**harness mode** — long-running build), also run/read:
+   - `node ~/.claude/ai-dev/harness/aidev.mjs status`
+   - `node ~/.claude/ai-dev/harness/aidev.mjs progress tail -n 2`
+   - `git log --oneline -5`
+   - the first ~40 lines of `.ai-dev/knowledge/map.md` (if present)
+   and **read `~/.claude/ai-dev/harness.md`** before acting on the harness.
+
 Log to `.ai-dev/session-log.md`:
 ```
 [YYYY-MM-DD HH:MM] Session opened. Read: context, plan, assignments, graph.
@@ -39,6 +46,14 @@ Plan: draft | approved
   🚫 blocked : task-006 — waiting for task-004
 
 Next: [one sentence — what happens next]
+```
+
+Harness mode adds:
+```
+Harness: 42/120 features passing  ███████░░░░░░░░░  35%   blocked: 1
+Last session (14): F-031 ✅ — "Next: F-032, mail is captured in tmp/mail"
+Next feature: F-032 — user can reset password (browser)
+→ /ai-dev-session (one) · /ai-dev-loop N (chain) · /ai-dev-knowledge (refresh map)
 ```
 
 ---
@@ -123,3 +138,16 @@ Load these files **only when the trigger occurs** — never preemptively:
 | Delivery report `## Impacto no plano` ≠ None | `~/.claude/ai-dev/execution.md` → Feedback section |
 | Plan changes after approval | `~/.claude/ai-dev/execution.md` → Changelog section |
 | Task needs credentials/external access | `~/.claude/ai-dev/execution.md` → Credentials section |
+| `.ai-dev/harness/` exists, or user wants a long build / many features | `~/.claude/ai-dev/harness.md` |
+
+---
+
+## Long-running harness — core rules
+
+For builds bigger than one plan (an app, a product surface, 20+ behaviours) use the harness:
+`/ai-dev-harness` (once) → user approves the frozen feature list → `/ai-dev-session` or `/ai-dev-loop N`.
+
+- One fresh subagent per session, prompt always `.ai-dev/harness/session-prompt.md`. One feature per session.
+- Feature state changes only through `aidev` (`pass` needs `--evidence`); definitions are frozen.
+- After every session the PM audits (`aidev guard`, `doctor`, progress entry, commit) — never trust the summary alone.
+- The long-run rule: an agent doesn't need a bigger memory, it needs better notes. Design every session so a stranger could pick it up cold.

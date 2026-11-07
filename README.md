@@ -2,6 +2,7 @@
 
 > Planning-first development for Claude Code + GitHub Copilot.
 > You talk to the chat. Agents do the work. Files carry the context.
+> **New:** a long-running harness that keeps agents building for hours — one verified feature per session.
 
 ---
 
@@ -40,12 +41,33 @@ Before any execution, the PM plans with you — proposes tasks, checks each one 
 
 ---
 
+## Long-running harness — hours of work, one verified feature at a time
+
+Based on Anthropic's [Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents). For builds too big for one plan (an app, 20–300 behaviours):
+
+```
+/ai-dev-harness     initializer: features.json (all failing) · init.sh · capabilities (MCP, skills) · knowledge map
+                    → you approve → definitions frozen
+/ai-dev-loop 10     chains fresh-context sessions; each one: read notes → smoke test → ONE feature
+                    → verify in a real browser (Playwright MCP) → aidev pass --evidence → commit → handoff note
+                    PM audits every session (aidev guard/doctor) and stops on anything suspicious
+```
+
+```
+Harness: 42/120 features passing  ███████░░░░░░░░░  35%   blocked: 1
+Last session (14): F-031 ✅ — "Next: F-032, mail is captured in tmp/mail"
+```
+
+What makes it hold over many sessions is structure, not prompting: a frozen feature list with a lock file (no rewriting tests), evidence-gated `passes`, an append-only progress log, an `init.sh` smoke test, and a **knowledge map** (`.ai-dev/knowledge/`) checked for staleness against the real tree. Full guide: [docs/long-running-harness.md](docs/long-running-harness.md).
+
+---
+
 ## Install
 
 ```bash
 git clone git@github.com:LuisPontes1/ai-dev.git
 cd ai-dev
-bash install.sh        # pass --dry-run to preview without writing
+bash install.sh        # --dry-run to preview · --with-mcp to register Playwright MCP
 ```
 
 **What gets installed:**
@@ -60,6 +82,10 @@ bash install.sh        # pass --dry-run to preview without writing
 | Slash commands | `~/.claude/commands/` | `/ai-dev-init`, `/ai-dev-on`, `/ai-dev-off` |
 | Copilot plugin | `~/.claude/plugins/ai-dev-copilot/` | Copilot SDK + programmatic integration |
 | Copilot commands | `~/.claude/commands/copilot/` | `/copilot:setup`, `/copilot:review`, `/copilot:rescue`, ... |
+| Harness protocol | `~/.claude/ai-dev/harness.md` | Initializer, session, audit, loop rules |
+| Harness CLI | `~/.claude/ai-dev/harness/aidev.mjs` | Feature list, guard, progress log, knowledge map (zero deps) |
+| Skills | `~/.claude/skills/ai-dev-*` | Long-run session, feature list, e2e verification, knowledge map |
+| MCP (opt-in) | user scope | Playwright MCP for browser verification (`--with-mcp`) |
 
 The installer includes the Copilot plugin with `@github/copilot-sdk` — no separate installation needed. Requires Node.js >= 18.18 and `gh auth login` for GitHub authentication.
 
@@ -101,6 +127,7 @@ Heavy protocols are loaded **only when triggered**:
 | Next task is `deployment` | `~/.claude/ai-dev/execution.md` → Pre-flight section |
 | Subagent fails | `~/.claude/ai-dev/execution.md` → Rollback section |
 | Discovery finds something unexpected | `~/.claude/ai-dev/execution.md` → Feedback section |
+| Project has `.ai-dev/harness/` or a long build starts | `~/.claude/ai-dev/harness.md` |
 
 This keeps the PM's context window clean — protocols are pulled in just-in-time, not preloaded.
 
@@ -124,8 +151,21 @@ Each project gets this (created by `/ai-dev-init`, gitignored):
 ├── dependencies/
 │   └── graph.md          # DAG: which tasks block which
 ├── discovery/            # Findings from discovery/preflight/deployment tasks
-└── reports/
-    └── delivery-001.md   # Written by subagent on task completion
+├── reports/
+│   └── delivery-001.md   # Written by subagent on task completion
+├── harness/              # Long-running harness (created by /ai-dev-harness, optionally tracked in git)
+│   ├── features.json     # Definition of done — all features start passes:false
+│   ├── features.lock.json# Frozen definitions; `aidev guard` detects edited/removed tests
+│   ├── progress.md       # Handoff note, one entry per session
+│   ├── init.sh           # Bootstrap + smoke test, run first in every session
+│   ├── session-prompt.md # Identical prompt for every coding session
+│   ├── capabilities.md   # MCP servers, skills, verification ladder
+│   └── evidence/         # Screenshots and logs proving each passing feature
+└── knowledge/            # Knowledge map
+    ├── map.generated.md  # Inventory from `aidev map`
+    ├── map.md            # Curated: modules ↔ features, where-to-look, invariants
+    ├── decisions.md      # ADR log
+    └── gotchas.md        # Symptom → cause → fix
 ```
 
 ---
@@ -156,6 +196,7 @@ The `copilot` executor uses the integrated Copilot plugin (`@github/copilot-sdk`
 | [System Overview](docs/overview.md) | Full architecture, roles, flows, design decisions |
 | [Copilot Plugin](docs/copilot-plugin.md) | Plugin reference: commands, models, effort levels |
 | [Databricks Example](docs/databricks-example.md) | End-to-end pipeline with Asset Bundle |
+| [Long-Running Harness](docs/long-running-harness.md) | Initializer + session chain, feature list, knowledge map, skills, MCP |
 
 ## Slash commands
 
@@ -167,6 +208,10 @@ The `copilot` executor uses the integrated Copilot plugin (`@github/copilot-sdk`
 | `/ai-dev-exec` | Execute next task (auto-detects executor: claude-code, copilot, or manual) |
 | `/ai-dev-exec task-003` | Execute a specific task |
 | `/ai-dev-review` | Copilot review aware of task context (objective, criteria, changed files) |
+| `/ai-dev-harness` | Initialize the long-running harness (feature list, init.sh, capabilities, knowledge map) |
+| `/ai-dev-session` | One fresh-context coding session: one feature, verified end to end, audited |
+| `/ai-dev-loop N` | Chain up to N sessions, stopping on guard violations, blocked features or budget |
+| `/ai-dev-knowledge` | Build or refresh the knowledge map |
 | `/copilot:setup` | Verify Copilot plugin status and authentication |
 | `/copilot:review` | Code review via Copilot (working tree or branch) |
 | `/copilot:adversarial-review` | Review that questions design decisions and trade-offs |

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # install.sh — AI-Dev Planning System installer
 # Sets up ~/CLAUDE.md globally so every repo on this machine inherits planning-first behavior.
-# Usage: bash install.sh [--dry-run]
+# Usage: bash install.sh [--dry-run] [--with-mcp]
+#   --with-mcp   also register the Playwright MCP server (user scope) for end-to-end browser verification
 
 set -euo pipefail
 
@@ -10,6 +11,8 @@ GLOBAL_CLAUDE="$HOME/CLAUDE.md"
 CLAUDE_COMMANDS_DIR="$HOME/.claude/commands"
 CLAUDE_AIDEV_DIR="$HOME/.claude/ai-dev"
 COPILOT_PLUGIN_DIR="$HOME/.claude/plugins/ai-dev-copilot"
+CLAUDE_SKILLS_DIR="$HOME/.claude/skills"
+WITH_MCP=false
 MARKER_START="<!-- ai-dev:start -->"
 MARKER_END="<!-- ai-dev:end -->"
 DRY_RUN=false
@@ -31,6 +34,7 @@ error()   { echo -e "${RED}[ai-dev]${NC} $*" >&2; }
 
 for arg in "$@"; do
   [[ "$arg" == "--dry-run" ]] && DRY_RUN=true
+  [[ "$arg" == "--with-mcp" ]] && WITH_MCP=true
 done
 $DRY_RUN && warn "DRY RUN — no files will be written"
 
@@ -89,7 +93,7 @@ install_protocol_files() {
   info "Installing on-demand protocol files to $CLAUDE_AIDEV_DIR"
   if ! $DRY_RUN; then
     mkdir -p "$CLAUDE_AIDEV_DIR"
-    for f in planning.md execution.md; do
+    for f in planning.md execution.md harness.md; do
       [[ -f "$src_dir/$f" ]] || { warn "  Missing: $src_dir/$f — skipping"; continue; }
       cp "$src_dir/$f" "$CLAUDE_AIDEV_DIR/$f"
       success "  Installed: ~/.claude/ai-dev/$f"
@@ -104,6 +108,7 @@ install_protocol_files() {
   else
     warn "  Would install: ~/.claude/ai-dev/planning.md"
     warn "  Would install: ~/.claude/ai-dev/execution.md"
+    warn "  Would install: ~/.claude/ai-dev/harness.md"
     warn "  Would install: ~/.claude/ai-dev/personas/"
   fi
 }
@@ -213,7 +218,70 @@ install_copilot_plugin() {
   success "Copilot plugin installed"
 }
 
-# ── 7. Summary ───────────────────────────────────────────────────────────────
+# ── 7. Long-running harness CLI → ~/.claude/ai-dev/harness/ ─────────────────
+install_harness() {
+  local src_dir="$SCRIPT_DIR/harness"
+  local dest_dir="$CLAUDE_AIDEV_DIR/harness"
+  [[ ! -d "$src_dir" ]] && { warn "No harness/ directory — skipping"; return; }
+  info "Installing long-running harness CLI to $dest_dir"
+  if $DRY_RUN; then
+    warn "  Would install: ~/.claude/ai-dev/harness/aidev.mjs (+ lib/)"
+    return
+  fi
+  mkdir -p "$dest_dir/lib"
+  cp "$src_dir/aidev.mjs" "$src_dir/package.json" "$dest_dir/"
+  cp "$src_dir/lib/"*.mjs "$dest_dir/lib/"
+  chmod +x "$dest_dir/aidev.mjs"
+  if command -v node &>/dev/null; then
+    node "$dest_dir/aidev.mjs" help >/dev/null && success "  Installed: aidev CLI (node ~/.claude/ai-dev/harness/aidev.mjs)"
+  else
+    warn "  Node.js not found — the harness CLI needs Node.js >= 18.18"
+  fi
+}
+
+# ── 8. Skills → ~/.claude/skills/ ───────────────────────────────────────────
+install_skills() {
+  local src_dir="$SCRIPT_DIR/skills"
+  [[ ! -d "$src_dir" ]] && { warn "No skills/ directory — skipping"; return; }
+  info "Installing skills to $CLAUDE_SKILLS_DIR"
+  for skill in "$src_dir"/*/; do
+    [[ -f "$skill/SKILL.md" ]] || continue
+    local name; name="$(basename "$skill")"
+    if $DRY_RUN; then
+      warn "  Would install skill: $name"
+    else
+      mkdir -p "$CLAUDE_SKILLS_DIR/$name"
+      cp -r "$skill". "$CLAUDE_SKILLS_DIR/$name/"
+      success "  Installed skill: $name"
+    fi
+  done
+}
+
+# ── 9. MCP servers (opt-in) ─────────────────────────────────────────────────
+install_mcp() {
+  if ! $WITH_MCP; then
+    info "MCP: skipped (pass --with-mcp to register Playwright MCP for browser verification)"
+    return
+  fi
+  if $DRY_RUN; then
+    warn "  Would run: claude mcp add --scope user playwright -- npx -y @playwright/mcp@latest"
+    return
+  fi
+  if ! command -v claude &>/dev/null; then
+    warn "  'claude' CLI not found — register manually:"
+    warn "    claude mcp add --scope user playwright -- npx -y @playwright/mcp@latest"
+    return
+  fi
+  if claude mcp list 2>/dev/null | grep -q '^playwright'; then
+    info "  Playwright MCP already registered"
+  elif claude mcp add --scope user playwright -- npx -y @playwright/mcp@latest; then
+    success "  Registered Playwright MCP (user scope)"
+  else
+    warn "  Could not register Playwright MCP — see docs/long-running-harness.md"
+  fi
+}
+
+# ── 10. Summary ───────────────────────────────────────────────────────────────
 print_summary() {
   echo ""
   echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -224,8 +292,10 @@ print_summary() {
   echo "  ~/.claude/ai-dev/enabled             — toggle flag (ai-dev is ON)"
   echo "  ~/.claude/ai-dev/                    — on-demand protocol files + templates"
   echo "  ~/.claude/ai-dev/personas/           — specialist prompt templates (8 personas)"
-  echo "  ~/.claude/ai-dev/templates/          — starters, task/agent/report templates"
-  echo "  ~/.claude/commands/                  — /ai-dev-init, /ai-dev-on, /ai-dev-off"
+  echo "  ~/.claude/ai-dev/templates/          — starters, task/agent/report, harness + knowledge templates"
+  echo "  ~/.claude/ai-dev/harness/aidev.mjs   — long-running harness CLI (features, progress, knowledge map)"
+  echo "  ~/.claude/skills/ai-dev-*            — long-run session, feature list, e2e verification, knowledge map"
+  echo "  ~/.claude/commands/                  — /ai-dev-init, /ai-dev-exec, /ai-dev-harness, /ai-dev-loop, ..."
   echo "  ~/.claude/plugins/ai-dev-copilot/    — Copilot plugin + SDK"
   echo "  ~/.claude/commands/copilot/          — /copilot:setup, /copilot:review, ..."
   echo ""
@@ -235,6 +305,7 @@ print_summary() {
   echo "    3. Claude detects no .ai-dev/ and prompts /ai-dev-init"
   echo "    4. Review .ai-dev/context.md, describe what you want to build"
   echo "    5. Approve the plan — execution begins"
+  echo "    Long builds: /ai-dev-harness → approve feature list → /ai-dev-loop 10"
   echo ""
   echo "  Docs: $SCRIPT_DIR/docs/"
   echo ""
@@ -247,4 +318,7 @@ install_enable_flag
 install_templates
 install_commands
 install_copilot_plugin
+install_harness
+install_skills
+install_mcp
 print_summary
