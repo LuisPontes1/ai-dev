@@ -81,7 +81,7 @@ The toggle is a file: `~/.claude/ai-dev/enabled`. Present = ON. Absent = OFF. Tu
 
 A common problem with large system prompts is that the model "forgets" rules buried in the middle. ai-dev avoids this by splitting instructions into a slim core and modular protocols loaded just-in-time.
 
-**Core** (`~/CLAUDE.md`, ~80 lines):
+**Core** (`~/CLAUDE.md`, ~215 lines):
 - Startup sequence (check toggle → check `.ai-dev/` → show dashboard)
 - Context source rule (everything from files)
 - Plan gate (nothing executes until approved)
@@ -122,7 +122,8 @@ Check ~/.claude/ai-dev/enabled
 
 Check .ai-dev/ in current directory
   └── Not found → offer /ai-dev-init, stop
-  └── Found → read context.md, plan.md, assignments.md, graph.md, session-log.md (last 5)
+  └── Found → SessionStart hook has injected handoff, plan, session log and knowledge
+               read context.md, plan.md, assignments.md, graph.md, session-log.md (last 5), handoff.md
                show project dashboard
                log: "Session opened"
 ```
@@ -298,12 +299,18 @@ The PM always runs on the strongest model — that's where architectural decisio
 .ai-dev/
 │
 ├── context.md
+│     Single source of truth: objective, stack, code map (Estrutura + Onde procurar), decisions,
+│     invariants, gotchas, learnings, credentials (names only). Written also by `aidev learn`.
 │     Project briefing: objective, stack, architecture, credentials (names only, never values)
 │     Read by PM on startup. Referenced by subagents via task files.
 │
 ├── plan.md
 │     Status: draft|approved. Task table with executor/model/effort.
 │     Sequence, risks, acceptance criteria. Changelog (append-only).
+│
+├── handoff.md
+│     Live state: focus, next step, awaiting user, active persona (PM, `aidev handoff set`),
+│     plus the automatic compaction snapshot and the last compaction summary (hooks).
 │
 ├── session-log.md
 │     Append-only audit log. PM writes every significant action with timestamp.
@@ -324,6 +331,7 @@ The PM always runs on the strongest model — that's where architectural decisio
 │
 ├── discovery/
 │   ├── preflight-001.md       Credentials/env check result
+│   ├── inventory.md           Code inventory from `aidev map` (ground truth for the map in context.md)
 │   ├── tables-findings.md     Example: schema exploration output
 │   └── job-run.md             Example: run_id from deployment task
 │

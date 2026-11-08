@@ -156,7 +156,7 @@ When off: zero overhead, no mentions, Claude behaves normally. Your `.ai-dev/` f
 
 ## Architecture: core + on-demand
 
-The system is designed to use minimal context. `~/CLAUDE.md` contains only the core (~80 lines): startup, context rule, plan gate, subagent template.
+The system is designed to use minimal context. `~/CLAUDE.md` contains only the core (~215 lines): startup, context rule, plan gate, subagent template, handoff and compaction rules, knowledge rules.
 
 Heavy protocols are loaded **only when triggered**:
 

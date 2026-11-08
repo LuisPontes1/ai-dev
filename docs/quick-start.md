@@ -9,21 +9,29 @@ From zero to first planned project in 10 minutes.
 ```bash
 git clone git@github.com:LuisPontes1/ai-dev.git
 cd ai-dev
-bash install.sh
+bash install.sh --with-mcp --with-superpowers
 ```
 
-Use `--dry-run` to preview what will be created without writing anything.
+Flags: `--dry-run` previews without writing · `--with-mcp` registers Playwright MCP (browser testing) ·
+`--with-superpowers` installs the Superpowers skills plugin · `--no-hook` skips the hooks in `~/.claude/settings.json`.
 
 **What gets installed:**
 
 ```
-~/CLAUDE.md                      ← PM core instructions (~80 lines)
+~/CLAUDE.md                      ← PM core: startup, plan gate, subagent template, handoff, knowledge
 ~/.claude/ai-dev/enabled         ← toggle flag (system is ON)
 ~/.claude/ai-dev/planning.md     ← on-demand: atomicity, types, models, personas
 ~/.claude/ai-dev/execution.md    ← on-demand: rollback, preflight, copilot, parallel, credentials
+~/.claude/ai-dev/harness.md      ← on-demand: long-running harness (initializer, sessions, audit, loop)
+~/.claude/ai-dev/skills.md       ← on-demand: which skill to use when (ai-dev, Superpowers, Karpathy)
+~/.claude/ai-dev/guidelines/     ← Karpathy coding discipline, applied to every subagent
 ~/.claude/ai-dev/personas/       ← 8 specialist prompt templates
-~/.claude/ai-dev/templates/      ← starters, task/report/agent templates
-~/.claude/commands/ai-dev-*.md   ← /ai-dev-init, /ai-dev-on, /ai-dev-off
+~/.claude/ai-dev/templates/      ← starters, task/report/handoff templates, harness templates
+~/.claude/ai-dev/harness/        ← the `aidev` CLI (features, progress, map, brief/recall/learn, handoff, compaction)
+~/.claude/ai-dev/knowledge-dir   ← points to <your ai-dev clone>/knowledge (general knowledge, versioned)
+~/.claude/skills/ai-dev-*        ← 4 skills: knowledge, long-run session, feature list, e2e verification
+~/.claude/commands/ai-dev-*.md   ← /ai-dev-on|off|init|exec|review|harness|session|loop|knowledge
+~/.claude/settings.json          ← hooks: SessionStart · SubagentStart · PreCompact · PostCompact
 ```
 
 The installer includes the Copilot plugin (`@github/copilot-sdk`) — it copies the plugin, runs `npm install`, and installs the `/copilot:*` slash commands automatically.
@@ -31,14 +39,20 @@ The installer includes the Copilot plugin (`@github/copilot-sdk`) — it copies 
 **Verify:**
 ```bash
 ls ~/.claude/ai-dev/
-# enabled  execution.md  personas/  planning.md  templates/
+# enabled  execution.md  guidelines/  harness/  harness.md  knowledge-dir  personas/  planning.md  skills.md  templates/
+node ~/.claude/ai-dev/harness/aidev.mjs help     # the aidev CLI answers
 ```
+In Claude Code, `/hooks` lists the four ai-dev hooks.
+
+In the rest of this guide, `aidev` means `node ~/.claude/ai-dev/harness/aidev.mjs`.
 
 ---
 
 ## 2. Open a project
 
-Open any repo in VS Code with Claude Code active. The PM reads the project state and responds:
+Open any repo in VS Code with Claude Code active. In a project that already has `.ai-dev/`, the SessionStart hook
+injects the session state (handoff, plan, session log) and the project knowledge before your first message, and the
+PM shows the dashboard. In a new project it responds:
 
 ```
 This project has no .ai-dev/. Want me to initialize it with /ai-dev-init?
@@ -54,8 +68,10 @@ The PM runs `/ai-dev-init`. It:
 
 1. Detects your project type (`python-package`, `databricks-bundle`, `data-pipeline`, or `generic`)
 2. Creates `.ai-dev/` with all files, using the matching starter template
-3. Pre-fills `context.md` with what it can infer from the project
-4. Adds `.ai-dev/` to `.gitignore` (or `.databricksignore`)
+3. Pre-fills `context.md` with what it can infer, including the code map (`aidev map` → `discovery/inventory.md`)
+4. Creates `handoff.md`, the live "where are we now" file
+5. Checks the ai-dev general knowledge for lessons about your stack (`aidev recall`)
+6. Adds `.ai-dev/` to `.gitignore` (or `.databricksignore`)
 
 PM response:
 
@@ -63,14 +79,15 @@ PM response:
 Initialized. Detected: python-package
 
 Files created:
-  .ai-dev/context.md            ← review [TODO] sections
+  .ai-dev/context.md            ← review [TODO] sections; holds map, decisions, gotchas
   .ai-dev/plan.md               ← Status: draft
   .ai-dev/session-log.md
+  .ai-dev/handoff.md            ← focus, next step, what awaits you, active persona
   .ai-dev/tasks/_template.md
   .ai-dev/agents/assignments.md
   .ai-dev/agents/roles.md
   .ai-dev/dependencies/graph.md
-  .ai-dev/discovery/
+  .ai-dev/discovery/inventory.md
   .ai-dev/reports/
 
 Sections needing review in context.md:
@@ -247,6 +264,31 @@ Nothing proceeds without your decision.
 
 ---
 
+## 9. Knowledge and continuity (automatic)
+
+You don't manage memory — the files and hooks do:
+
+- **Every task teaches something.** Delivery reports have a `## Conhecimento` section; the PM records it into
+  `context.md` with `aidev learn gotcha|decision|note`. Lessons for every project go to the ai-dev repo
+  (`aidev learn note --global --applies databricks`), shared with `aidev sync`.
+- **The PM keeps `handoff.md` current** (`aidev handoff set --foco task-004 --persona security …`).
+- **Compaction doesn't lose the thread.** Before compacting, a hook saves a snapshot and tells the summarizer what
+  it must keep; after, the PM role, the active persona, the plan and your last messages come back first.
+- **Next day, other machine, cloud session:** the PM reads `.ai-dev/` and picks up where it stopped.
+
+Ask "what do we know about X?" and the PM runs `aidev recall X` across the whole `.ai-dev/`.
+Details: [Knowledge & Skills](knowledge-and-skills.md).
+
+---
+
+## 10. Building something big? Use the harness
+
+For an app or product surface (20–300 behaviours), switch to harness mode: `/ai-dev-harness` writes a feature list
+(all failing), `init.sh` and a capabilities file; you approve it; `/ai-dev-loop 10` chains fresh sessions that each
+implement and browser-test exactly one feature. Details: [Long-Running Harness](long-running-harness.md).
+
+---
+
 ## Useful chat commands
 
 | Command / what you say | What happens |
@@ -257,6 +299,11 @@ Nothing proceeds without your decision.
 | `/ai-dev-exec --parallel-max 6` | Parallel batch with custom max size |
 | `/ai-dev-review` | Copilot review of the last completed task |
 | `/ai-dev-review --adversarial` | Adversarial review (questions design decisions) |
+| `/ai-dev-knowledge` | Refresh the code map in `context.md`; `--promote` moves knowledge to the right place |
+| `/ai-dev-harness` · `/ai-dev-session` · `/ai-dev-loop N` | Long builds: feature list, one session, chain of N sessions |
+| "what do we know about auth?" | PM runs `aidev recall auth` |
+| "remember that the API is paginated by cursor" | PM records it with `aidev learn` |
+| "where were we?" | PM reads `handoff.md` and the session log |
 | "project status" | PM shows full dashboard |
 | "pause here" | PM stops, waits for you |
 | "skip to task-004" | PM checks dependencies, warns if blocked |
@@ -283,3 +330,5 @@ When off, Claude applies no ai-dev rules — useful for exploratory sessions or 
 - [System Overview](overview.md) — full architecture, roles, design decisions
 - [Copilot Plugin](copilot-plugin.md) — plugin reference: commands, models, effort levels
 - [Databricks Example](databricks-example.md) — end-to-end pipeline with Asset Bundle
+- [Knowledge & Skills](knowledge-and-skills.md) — memory, handoff, compaction protocol, Superpowers + Karpathy
+- [Long-Running Harness](long-running-harness.md) — hours of work, one verified feature per session

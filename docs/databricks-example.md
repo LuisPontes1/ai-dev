@@ -9,7 +9,7 @@ Este exemplo mostra como o sistema `.ai-dev/` orquestra um estudo no Databricks 
 Pasta de trabalho: `~/estudos/databricks-churn-analysis/`  
 Não é um repo git — usa `.databricksignore`.
 
-O `install.sh` detecta isso e adiciona `.ai-dev/` ao `.databricksignore`.
+O `/ai-dev-init` detecta isso, usa o starter `databricks-bundle` e adiciona `.ai-dev/` ao `.databricksignore`.
 
 ---
 
@@ -323,6 +323,27 @@ Next action: Aguardando subagent copilot concluir task-002.
 5. **Rollback definido** — task-004 (deploy) tem rollback explícito; se falhar, o PM sabe o que fazer
 6. **Polling de jobs** — task-005 é um loop de polling; o subagent roda, aguarda, e só escreve o relatório quando o job termina
 7. **PM visível** — após cada task, o PM resume o que aconteceu e pergunta se quer continuar
+
+---
+
+## Conhecimento e continuidade neste exemplo
+
+O que cada task aprende fica no `.ai-dev/` e volta sozinho nas próximas sessões:
+
+- Depois da task-001, o relatório traz em `## Conhecimento` que a tabela de eventos é particionada por `event_date`
+  e que filtrar sem partição estoura o cluster. O PM registra no `context.md`:
+  ```
+  aidev learn gotcha --symptom "query em events estoura memória" --cause "sem filtro de partição" --fix "sempre filtrar event_date" --source task-001
+  ```
+- A task-003 descobre que o profile padrão aponta para o workspace errado. Isso vale para qualquer projeto
+  Databricks, então vai para o conhecimento geral do ai-dev:
+  ```
+  aidev learn note --global --applies databricks --learning "conferir 'databricks auth profiles' antes de deploy"
+  ```
+  Esse aprendizado aparece em todo projeto Databricks futuro, e não aparece num projeto React.
+- Enquanto a task-004 roda, o `handoff.md` diz: foco task-004, persona devops, aguardando usuário confirmar o
+  target `dev`. Se a conversa compactar no meio do polling da task-005, o hook restaura o papel de PM, a persona e o
+  plano, e o deploy não é tratado como aprovado por engano.
 
 ---
 
