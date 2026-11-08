@@ -209,4 +209,4 @@ an ai-dev equivalent.
 | `ai-dev-long-run-session` | every harness session |
 | `ai-dev-feature-list` | initializer / amend |
 | `ai-dev-e2e-verification` | verifying a feature like a user (Playwright MCP) |
-| `ai-dev-storytelling` | writing for people: hooks, structure (ABT, turning point, sparkline, SCQA), papers introduced organically, Akita-style closings, removing the "AI smell"; learns your voice in `knowledge/voz.md` |
+| `ai-dev-storytelling` | writing for people: persona, voice and tone; senior posture instead of "junior" text (judge, tradeoff, calibrated confidence); hooks, structure (ABT, turning point, sparkline, SCQA), papers introduced organically, Akita-style closings; sentence craft in Portuguese; removing the "AI smell"; learns your voice in `knowledge/voz.md` |
