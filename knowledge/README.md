@@ -8,6 +8,7 @@ e toda sessão na nuvem que usar o ai-dev.
 |---------|-------------|----------|
 | `learnings.md` | `aidev learn note --global` | lições curtas, com "Aplica-se a" (ex.: `databricks`, `python`, `all`) |
 | `gotchas.md` | `aidev learn gotcha --global` | sintoma → causa → correção, entre projetos |
+| `voz.md` | à mão / skill `ai-dev-storytelling` | como você escreve: ganchos, fechamentos, o que nunca fazer |
 
 - `install.sh` aponta o ai-dev para esta pasta (`~/.claude/ai-dev/knowledge-dir`), então os comandos gravam direto no clone.
 - `aidev sync` faz commit desta pasta, `pull --rebase` e `push` — o PM pergunta antes de rodar.

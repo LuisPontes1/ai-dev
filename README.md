@@ -79,6 +79,7 @@ general:  ai-dev/knowledge/    learnings.md · gotchas.md — versioned here, ev
 - **Load** automatically (hook; general lessons filtered to the project's stack) · **recall** with `aidev recall <terms>` · **capture** with `aidev learn gotcha|decision|note` (into `context.md`; `--global` into `ai-dev/knowledge/`) · **share** with `aidev sync` · **promote** with `/ai-dev-knowledge --promote`
 - Every subagent starts with `aidev brief` + `recall`; every delivery report has a `## Conhecimento` section the PM records
 - **Karpathy guidelines** (bundled) are the baseline discipline for every subagent and Copilot prompt
+- **Storytelling** skill for anything people will read (posts, talks, executive summaries): hook, ABT, papers introduced organically, Akita-style closing, no "AI smell" — and it learns your voice in `knowledge/voz.md`
 - **Superpowers** (optional plugin) skills are routed by moment: brainstorming before planning, systematic-debugging on failures, verification-before-completion before "done", TDD, code review, writing-skills to promote knowledge
 
 ### Compaction doesn't make the PM forget who it is
@@ -119,7 +120,7 @@ bash install.sh        # --dry-run · --with-mcp (Playwright MCP) · --with-supe
 | Copilot commands | `~/.claude/commands/copilot/` | `/copilot:setup`, `/copilot:review`, `/copilot:rescue`, ... |
 | Harness protocol | `~/.claude/ai-dev/harness.md` | Initializer, session, audit, loop rules |
 | Harness CLI | `~/.claude/ai-dev/harness/aidev.mjs` | Feature list, guard, progress log, knowledge map (zero deps) |
-| Skills | `~/.claude/skills/ai-dev-*` | Long-run session, feature list, e2e verification, knowledge map |
+| Skills | `~/.claude/skills/ai-dev-*` | Long-run session, feature list, e2e verification, knowledge, storytelling |
 | MCP (opt-in) | user scope | Playwright MCP for browser verification (`--with-mcp`) |
 | Hooks | `~/.claude/settings.json` | SessionStart · SubagentStart · PreCompact · PostCompact — session state, knowledge, compaction protocol |
 | General knowledge | `knowledge/` in this repo | Cross-project learnings and gotchas, versioned; installer points the CLI here |
