@@ -417,7 +417,7 @@ print_summary() {
   echo "  ~/.claude/ai-dev/personas/           — specialist prompt templates (8 personas)"
   echo "  ~/.claude/ai-dev/templates/          — starters (context.md with map/decisions/gotchas), task/report, harness"
   echo "  ~/.claude/ai-dev/harness/aidev.mjs   — aidev CLI (features, progress, map, brief/recall/learn/sync)"
-  echo "  ~/.claude/skills/ai-dev-*            — knowledge, storytelling, long-run session, feature list, e2e verification"
+  echo "  ~/.claude/skills/ai-dev-*            — knowledge, storytelling, video, long-run session, feature list, e2e verification"
   echo "  $SCRIPT_DIR/knowledge/  — general knowledge (all projects), versioned here; 'aidev sync' to share"
   echo "  ~/.claude/settings.json              — hooks: session start/resume/compact restore · subagents · compaction protocol"
   echo "  ~/.claude/ai-dev/guidelines/         — Karpathy coding discipline (all subagents + Copilot prompts)"

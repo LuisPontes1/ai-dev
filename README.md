@@ -120,7 +120,7 @@ bash install.sh        # --dry-run · --with-mcp (Playwright MCP) · --with-supe
 | Copilot commands | `~/.claude/commands/copilot/` | `/copilot:setup`, `/copilot:review`, `/copilot:rescue`, ... |
 | Harness protocol | `~/.claude/ai-dev/harness.md` | Initializer, session, audit, loop rules |
 | Harness CLI | `~/.claude/ai-dev/harness/aidev.mjs` | Feature list, guard, progress log, knowledge map (zero deps) |
-| Skills | `~/.claude/skills/ai-dev-*` | Long-run session, feature list, e2e verification, knowledge, storytelling |
+| Skills | `~/.claude/skills/ai-dev-*` | Long-run session, feature list, e2e verification, knowledge, storytelling, video |
 | MCP (opt-in) | user scope | Playwright MCP for browser verification (`--with-mcp`) |
 | Hooks | `~/.claude/settings.json` | SessionStart · SubagentStart · PreCompact · PostCompact — session state, knowledge, compaction protocol |
 | General knowledge | `knowledge/` in this repo | Cross-project learnings and gotchas, versioned; installer points the CLI here |

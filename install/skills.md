@@ -36,6 +36,7 @@ workflow contradicts an ai-dev gate, the gate wins.
 | A gotcha or procedure repeats in ≥ 2 sessions | `superpowers:writing-skills` (or `skill-creator`) | Promote knowledge into a project skill in `.claude/skills/`; list it in `capabilities.md`. |
 | Long builds, one feature per session | `ai-dev-long-run-session`, `ai-dev-feature-list`, `ai-dev-e2e-verification` | Harness mode. |
 | Map / decisions / gotchas | `ai-dev-knowledge-map` | Every mode. |
+| Video: cutting, captions, vertical framing, on-screen panels, render, QA, YouTube publishing | `ai-dev-video` | Gates G1–G6; heavy render on Colab/VMs with the project's fonts folder; nothing shown without visual check, nothing published without explicit ok. |
 | Writing for people: post, article, talk, launch/announcement, executive summary, README intro, report for leadership | `ai-dev-storytelling` | Reads the user's voice (`<ai-dev>/knowledge/voz.md`) first. Every correction the user makes becomes a rule in `voz.md`. |
 
 ---

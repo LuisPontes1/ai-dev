@@ -29,7 +29,7 @@ Flags: `--dry-run` previews without writing · `--with-mcp` registers Playwright
 ~/.claude/ai-dev/templates/      ← starters, task/report/handoff templates, harness templates
 ~/.claude/ai-dev/harness/        ← the `aidev` CLI (features, progress, map, brief/recall/learn, handoff, compaction)
 ~/.claude/ai-dev/knowledge-dir   ← points to <your ai-dev clone>/knowledge (general knowledge, versioned)
-~/.claude/skills/ai-dev-*        ← 5 skills: knowledge, long-run session, feature list, e2e verification, storytelling
+~/.claude/skills/ai-dev-*        ← 6 skills: knowledge, long-run session, feature list, e2e verification, storytelling, video
 ~/.claude/commands/ai-dev-*.md   ← /ai-dev-on|off|init|exec|review|harness|session|loop|knowledge
 ~/.claude/settings.json          ← hooks: SessionStart · SubagentStart · PreCompact · PostCompact
 ```
