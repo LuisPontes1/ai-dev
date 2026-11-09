@@ -4,7 +4,7 @@
 
 | Produto | Formato | Duração | Para quê |
 |---------|---------|---------|----------|
-| **Short** | 9:16, legenda queimada | 30 s – 3 min (a maioria 60–112 s) | Alcance; isca para o canal |
+| **Short** | 9:16, legenda queimada | 45–115 s funcionaram; < 30 s tende a ser raso; limite 180 s | Alcance; isca para o canal |
 | **Corte médio** do canal | **16:9**, sem legenda queimada, `.srt` por palavra | 5–15 min | Uma unidade de ensino completa |
 | **Vídeo longo editado** ("a Palavra") | 16:9 com comunicação visual | o sermão inteiro (~50 min) | Quem não viu ao vivo; assistir com contexto |
 
@@ -31,6 +31,7 @@ Para **cada** corte, leia: a frase antes do início · o início · o fim · a f
 - Abertura morna é pulada ("Fazer a leitura de Romanos…" → começar 5 s depois, na primeira frase com conteúdo).
 - Conteúdo datado ("ontem celebramos…") envelhece o corte — evite como abertura.
 - Corte definido por **ids de segmento** da transcrição, não por tempo solto: a revisão de texto mantém os ids e os cortes aprovados continuam válidos.
+  Para começar na frase forte dentro de um segmento, corte **no nível da palavra** (`de_palavra` / `ate_palavra`).
 - Valide antes do render imprimindo duração e o fim do último segmento:
   ```python
   print(f"{k} {a}-{b} {ini/60:6.2f}-{fim/60:6.2f} {fim-ini:6.1f}s fim: …{S[b]['texto'][-50:]}")
@@ -67,7 +68,11 @@ Notas baixas / fora: exortação que soa como **bronca** fora de contexto; temas
 contexto; liturgia (ceia, louvor) — sem o culto em volta, não funcionam como corte.
 
 **Conteúdo passivo não tem gancho nativo — a seleção é a edição:** comece na frase forte; teste **cold open** (2–4 s da
-frase de impacto + flash + volta ao começo) e texto de gancho na tela. Ver `analytics.md`.
+frase de impacto do próprio corte + flash branco + volta ao começo; no `cortes.json`: `"cold_open": {"seg", "de_palavra",
+"ate_palavra"}`), em metade dos cortes. Motivo real: num Short de 68 s a frase-chave só vinha aos 0:53. Ver `analytics.md`.
+
+**Fidelidade fora de contexto:** se o corte pode ser lido como heterodoxo (ex.: "provar a fé pelas obras" sem deixar
+claro que a salvação é pela fé), ajuste o corte; se não der, **a descrição desarma**.
 
 Short pode servir de **isca** para o corte longo terminando antes da explicação completa (hipótese, ainda não medida).
 
@@ -77,4 +82,5 @@ Short pode servir de **isca** para o corte longo terminando antes da explicaçã
   validada no autocompletar e no `search.list` (ver `analytics.md`). Título serve à busca; capa e gancho servem ao feed. "Se o que nos une é dorama, igreja não existe"
   foi criticado: "Ele tá pesquisável?… Achei esquisito o título".
 - Sem clickbait enganoso; fiel à mensagem.
-- Palavras sensíveis (doença, morte): **fora do título, da capa e da primeira legenda**; o áudio não é mutado.
+- Palavras sensíveis (doença, morte): fora do título e da capa; na legenda, censura parcial ("ca***r") **e a palavra
+  mutada no áudio** — decisão mais recente do projeto (a primeira versão não mutava).

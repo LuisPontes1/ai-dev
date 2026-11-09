@@ -11,7 +11,12 @@ confere e baixa prévias. Trazer o render para a máquina local sem avisar foi u
 `google-colab-cli` (`colab --auth=adc`): `new --gpu T4` · `upload` · `drivemount` · `exec --timeout <s>` · `download` · `stop`.
 
 - **Sempre `--timeout`** — o padrão (~30 s) mata jobs longos.
-- **Teste de conexão** (um `exec` trivial) antes de um lote.
+- **Empacote** o que a VM precisa num `.tgz` (código, roteiros, `identidade/` com fontes) e suba junto a config do rclone.
+- **Ping-test** (`exec -f ping.py`) antes de um lote; se travar, derrube a VM e crie outra.
+- O job apaga a credencial do rclone num `finally`.
+- GPU recusada (limite de sessões) → VM só CPU com `libx264`. A VM CPU vem com OpenCV sem `CascadeClassifier`:
+  `pip install ultralytics; pip uninstall -y opencv-python opencv-python-headless; pip install --no-deps opencv-python-headless==4.10.0.84`.
+- O Drive tem **cota de escrita por minuto**: upload em lote cai → tente de novo com espera.
 - Job longo: `nohup` na VM + loop de monitor; a conexão do `exec` cai, mas o processo continua — confira com `pgrep`
   antes de relançar.
 - **Uma execução por VM.** Duas execuções concorrentes já apagaram a credencial do rclone uma da outra e a saída se

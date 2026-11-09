@@ -33,6 +33,9 @@ porcentagem de retenção.
 - Os **termos reais que trouxeram views** estão na API:
   `dimensions=insightTrafficSourceDetail` com `filters=insightTrafficSourceType==YT_SEARCH` (`maxResults` ≤ 25).
   Use para saber se a busca vem por **tema** ou só pelo **nome do canal**.
+- Dado real: busca era **~8% das views** e só trazia **nomes** (do canal e de um orador conhecido), nenhum tema.
+  Termos "inventados" para o título não têm busca; orador sem nome conhecido não é termo de busca → título pelo
+  tema/referência. Quando o tema não tem busca, o Short depende só do feed — diga isso ao usuário.
 - Antes de usar um termo no título, **valide**:
   1. no autocompletar do YouTube (`suggestqueries.google.com`, `ds=yt`, `hl`/`gl` do país);
   2. no top 8 do `search.list` (custa 100 unidades da cota).
@@ -55,6 +58,29 @@ Teste o cold open em **metade** dos cortes antes de adotar (é um experimento, n
 Se o painel for um Artifact do tipo Dashboard: dois `data-draw` com o mesmo nome fazem o último `dash.draw` vencer
 (uma tabela aparece dentro de outro elemento). **Prefixe os nomes por tipo** (`k-` números, `t-` tabelas, `c-` gráficos)
 e confira duplicatas antes de publicar.
+
+## Rotina de acompanhamento
+
+| Quando | O quê |
+|--------|-------|
+| Todo dia | coleta das métricas → atualiza o painel do canal |
+| Toda semana | relatório: achados + próximo passo de cada um; preenche o registro dos experimentos |
+
+O número de 48 h de um Short aparece no 3º–4º dia; o de 7 dias, no 9º.
+
+## Regras fixas para decidir
+
+| Pergunta | Regra |
+|----------|-------|
+| Qual horário vence? | Com ≥ 5 Shorts com dados por horário, o de mediana de "ficou" (e de views 48 h) **≥ 30% maior** vira padrão → próxima fase |
+| Que corte fazer mais? | O **quartil de cima** em "ficou": o que eles têm em comum (tema, orador, tipo de gancho, duração) vira prioridade |
+| O que derruba os fracos? | Queda nos 3 s → refazer ganchos; queda no fim → fechamentos |
+| A rubrica presta? | **A cada 10 Shorts:** correlação de cada critério do G3b com "ficou" e views 48 h → ajustar os pesos |
+| Personas simuladas? | Só com 20–30 Shorts e 7 dias de dados de cada |
+
+Comece pela **linha de base** do canal antes de qualquer experimento (no caso real: Shorts antigos com "ficou" de 22% a
+38%, mediana 31%; busca = 8% das views; vídeos longos vêm quase todos de inscritos; um vídeo institucional convertia
+~10× mais inscritos que os Shorts).
 
 ## Ligação com a rubrica
 

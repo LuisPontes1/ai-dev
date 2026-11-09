@@ -23,11 +23,22 @@ médios por último, o próximo… é a palavra").
 | Marca | símbolo da Fonte (preto na abertura, branco na marca d'água), "fonte" escrito; marca IPB atual (sarça **sem a pomba**) |
 | Tradução bíblica | NAA, com crédito "Nova Almeida Atualizada (NAA) © SBB" |
 
+## Fontes de verdade no repositório `cortes-culto`
+`docs/persona-shorts.md` (Shorts e cortes), `docs/persona-palavra.md` + `docs/palavra.md` (vídeo longo),
+`docs/seo.md`, `docs/acompanhamento.md`, `docs/experimentos.md`, `docs/calendario-shorts.md`, `identidade/`.
+Quando divergirem desta skill, **o repositório vence** (é atualizado pelas sessões de cada frente).
+
+## Zoom por pregador
+Vertical: Nicodemus 1,9 / `crop_y` 0,29 (aprovado); Ronaldo 2,0 / `crop_y` ≈ 0,556 (candidato). Vídeo longo: 2,7.
+
 ## CTA "✝ = ❤"
 Três botões (Inscrever-se, sininho, curtir) com toque; Inscrever-se vira **✝**, o sininho vira **=**, o curtir vira
 **❤** vermelho; os três se juntam no centro e o coração pulsa — "inscrever cruz = amor… vira uma mensagem" (aprovado
 em 08/11). No vídeo longo: a bolinha do símbolo aparece primeiro e gira, o chip "Gostou da mensagem?" abre, um cursor
 clica nos três botões, ~20 s, canto inferior esquerdo.
+
+## Calendário
+1 Short por dia, 07h/12h/18h girando (21h vetado), nunca dois do mesmo culto em sequência.
 
 ## Publicação
 - Título: **"Título | Texto | Rev. Nome"** (+ `#shorts` nos Shorts). Ex.: "Igreja não é clube: o que une os cristãos? | Romanos 12 | Rev. Ronaldo Vasconcelos #shorts".

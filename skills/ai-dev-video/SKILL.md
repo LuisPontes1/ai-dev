@@ -5,8 +5,10 @@ description: Editar vídeo a partir de gravações longas (cultos, palestras, au
 
 # Edição de vídeo no ai-dev
 
-Conhecimento destilado das sessões de cortes da Igreja Presbiteriana Fonte (07–09/11/2026): um piloto no Colab
-e dois dias de iteração com o Luis aprovando ou rejeitando cada versão. As regras abaixo foram **validadas pelo
+Conhecimento destilado das sessões de cortes da Igreja Presbiteriana Fonte (07–09/11/2026) — um piloto no Colab, dois
+dias de iteração com o Luis aprovando ou rejeitando cada versão — e conferido contra o repositório `cortes-culto`
+(personas e docs escritos pelas sessões de Shorts, vídeo longo e analytics). Quando o repositório de um projeto
+divergir desta skill, **o repositório vence**. As regras abaixo foram **validadas pelo
 olho do usuário**; ainda não pelas métricas do YouTube (G6). Trate números de retenção e pesos da rubrica como
 ponto de partida a calibrar.
 
@@ -36,13 +38,20 @@ explicitamente: "historia fecha? não para no meio? essa revisão é sua atribui
 1. **Corte não começa nem termina no meio de frase.** Leia a frase antes do início e depois do fim de cada corte. Pergunta sem resposta dentro do corte, não. História longa vira série em partes.
 2. **Nota de corte vem de rubrica cega, não de "olho".** Avaliador vê só o texto falado, como quem nunca viu o vídeo; só vai para aprovação o que tirar ≥ 7.
 3. **Legenda sincronizada de verdade exige alinhamento forçado** (MMS). Tempo por palavra do Whisper erra até 2 s.
-4. **Recorte vertical: parado o short inteiro, onde o assunto passa mais tempo; se ele sai, reduza o zoom** em vez de mover. Quando precisar mover, deslize com easing (cosseno), nunca salto.
+4. **Recorte: parado + deslizadas.** Parado enquanto o orador está no terço central; desliza (rampa de 0,7 s com easing cosseno, `x` como expressão de `t` no ffmpeg) só quando ele passa ~2 s fora, com ≥ 4 s entre movimentos. Rastreie o **corpo** (YOLO), não o rosto; faça o crop em `yuv444p`; zoom de cintura por orador.
 5. **Nenhum script usa fonte do sistema.** Fontes vão numa pasta do projeto, junto com o código, para toda VM. Confira com `fc-list` antes de queimar legenda.
 6. **Vídeo pesado roda no Colab/VM, não na máquina local** — e não mude essa arquitetura sem avisar.
 7. **Nada é mostrado ao usuário sem conferência visual:** checagem automática de colisão entre elementos + folha de contato com um quadro por elemento que entra.
 8. **Nada vai ao ar sem o "ok" explícito** no vídeo final e no pacote (título, descrição, tags, links).
 9. **Prévia leve (720p) para o celular, e avise que ela não serve para julgar nitidez.** O original fica no Drive.
 10. **Foco:** o que não é tarefa do assistente (ex.: thumbnail de série feita por outra pessoa) não come o tempo dos cortes.
+
+## Persona do projeto
+
+Projeto de vídeo perene merece uma persona por frente (Shorts, vídeo longo, analytics). Base pronta:
+`persona-editor.md`. A persona injetada pelo ai-dev (`.ai-dev/persona.md` ou `.ai-dev/personas/<nome>.md`) deve ter
+**até ~3.000 caracteres** — identidade, inegociáveis, ponteiros. O manual completo da frente (ex.: um
+`docs/persona-shorts.md` de 12 mil caracteres) fica no repositório, e a persona curta manda lê-lo antes de agir.
 
 ## Como trabalhar com o usuário
 

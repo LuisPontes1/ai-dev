@@ -81,19 +81,26 @@ Emendas: abertura com `xfade=transition=fade:duration=0.8` + `acrossfade=d=0.8`;
 | GPU NVIDIA (Colab T4/L4) | `h264_nvenc -preset p5 -cq 20` | 13 vídeos em ~20 min na T4 |
 | Mac | `h264_videotoolbox -b:v <taxa> -profile:v high` | ~8× tempo real |
 
-**Qualidade do vídeo longo** ("Mas a qualidade tá top?"): zoom come resolução — 1,35× ≈ 800p (~68% do detalhe),
-1,2× ≈ 900p (~78%). Final: **zoom 1,2×, saída 1440p, ~30 Mbps**.
+**Qualidade e saída** ("Mas a qualidade tá top?"): zoom come resolução (1,35× ≈ 800p, ~68% do detalhe; 1,2× ≈ 900p,
+~78%) — e o zoom certo é decidido pelo enquadramento (`enquadramento.md`), não pela resolução. O que compensa é a
+**saída**: o YouTube codifica uploads maiores em VP9/AV1 com mais bitrate.
+- Short: composição em 1080×1920, saída **1440×2560**.
+- Vídeo longo: gráficos desenhados em 1080p e ampliados; saída **4K (2160p), ~45 Mbps, H.264 NVENC**. O arquivo
+  (11–17 GB) não abre na prévia do Drive → o mesmo job gera uma **versão leve 720p (~2,5 Mbps)** para o usuário assistir.
+- Render do vídeo longo leva ~45–60 min: teste enquadramento e telas em trechos de ~1 min antes.
+
+**ffmpeg do Homebrew vem sem libass/drawtext**: legenda queimada e texto renderizam na VM (ou instale um build completo).
 
 ## 6. Áudio
 
 | Peça | Alvo |
 |------|------|
 | Shorts e cortes | `loudnorm=I=-14:TP=-1.5:LRA=11` (−14 ±1 LUFS) |
-| Vídeo longo | `loudnorm=I=-16:TP=-1.5:LRA=11` |
+| Vídeo longo | `loudnorm=I=-16:TP=-1.5:LRA=11` (conferir: ~−16 LUFS integrado, pico ≤ −1 dBTP) |
 | Trilha da abertura | −24/−25 LUFS (~9 dB abaixo da fala) — "ficou um pouco alto" em −16 |
 | Trilha do encerramento | −22 LUFS, fade in 1 s / out 3 s |
 
 - Pendente: loudnorm em **duas passadas**.
-- Trilha a partir do próprio louvor: tire as vozes com **Demucs** (roda em segundos localmente). Nunca use gravação
+- Trilha a partir do próprio louvor: tire as vozes com **Demucs** (`htdemucs --two-stems=vocals`, roda em segundos localmente). Nunca use gravação
   "da internet" (claim de direitos); plano B: Biblioteca de Áudio do YouTube.
 - AAC 192k nos arquivos; transmissão ao vivo limitada a 160 kbps pelo YouTube.

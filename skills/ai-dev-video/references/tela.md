@@ -21,7 +21,8 @@ Sem legenda queimada. Gere `.srt` por palavra (até 10 palavras / 42 caracteres 
 
 ## Capa do Short e marca d'água
 
-- **Capa = um quadro exato** (1 s, no fim), não 5 s: título equilibrado em linhas (sem palavra órfã: "O Evangelho / nos move", não "O Evangelho nos / move"), marca e @canal sobre o vídeo escurecido; áudio em silêncio. O YouTube escolhe um quadro do meio se você não mandar a capa: use `thumbnails.set` com o PNG.
+- **Capa = um quadro exato** (1 s, no fim), não 5 s — e o loop volta ao gancho. O texto da capa (`titulo_capa`) serve
+  ao **feed** (curto, pergunta); o título do vídeo serve à **busca**. Detalhes: título equilibrado em linhas (sem palavra órfã: "O Evangelho / nos move", não "O Evangelho nos / move"), marca e @canal sobre o vídeo escurecido; áudio em silêncio. O YouTube escolhe um quadro do meio se você não mandar a capa: use `thumbnails.set` com o PNG.
 - **Marca d'água** pequena, branca, semitransparente (≈130 px, opacidade 0,7) no canto superior direito; some durante a capa. No 16:9 dispensável se a transmissão já tem logo.
 
 ## Vídeo longo com comunicação visual
@@ -51,21 +52,26 @@ palavras do orador; nada inventado. Corte o que for redundante.
 - referência medida: **~21% com painel, ~79% tela limpa**, algo novo a cada ~1 min, histórias longas limpas de propósito.
   Não há "percentual ideal" — calibre pela curva de retenção (princípios de Mayer: coerência, sinalização, contiguidade).
 
-**Regiões exclusivas:** cada canto tem **um elemento por vez** (ex.: chip do orador **ou** CTA no inferior esquerdo).
+**Regiões exclusivas:** cada região tem **um elemento por vez**. Versão final do vídeo longo: **embaixo, no centro** —
+nome do orador (2×: início e meio, 10 s) **ou** CTA (2×, 20 s); os dois abrem igual (a bolinha do símbolo surge, gira uma
+volta com calma em ~2 s e o chip abre para os dois lados). O canto inferior esquerdo foi abandonado porque cobria o corpo
+no zoom fechado. Mão do orador coberta por instantes é aceitável; **rosto nunca**. Logo fixo no topo direito.
 O render deve **falhar** se dois elementos ocuparem a mesma região ao mesmo tempo — o erro real foi o CTA abrir em
 cima do nome do pregador ("acho que vc não fez o check visual").
 
 **Logo queimado pela transmissão** cortado pelo recorte: desloque o recorte para deixá-lo de fora e ponha o logo limpo.
 
 **Chip do orador** (nome, série, título · texto) entra no início e uma vez no meio — não "toda hora".
+**O esboço do sermão nunca vai para a tela** (só serve para a revisão da transcrição entender o contexto).
 
 **Abertura e encerramento** curtos (~6,5 s / ~29 s): símbolo girando, título revelado; no fim "3 frases para levar",
 espaços para vídeos sugeridos, como conhecer, próximo episódio. Elementos clicáveis da tela final são postos à mão no Studio.
 
 ## CTA
 
-**Short:** zona segura entre o meio e o terço de baixo (fora da interface à direita e embaixo); entra a ~60% do
-vídeo, ~4 s, sem som. Animação de botões sendo tocados funciona melhor que selo estático ("mostrar interativamente com
+**Short:** zona segura entre o meio e o terço de baixo (fora da interface à direita e embaixo); entra a ~60% da fala,
+~5–6 s, sem som. Variante padrão atual: a bolinha do símbolo surge, dá uma volta e o "Inscrever-se" abre dela (a mesma
+entrada do CTA do vídeo longo), depois os toques nos botões. Animação de botões sendo tocados funciona melhor que selo estático ("mostrar interativamente com
 os botões… seria bom"). Ícones que a fonte não tem são desenhados (PIL). Interface simulada só na prévia, nunca no vídeo.
 
 **Vídeo longo:** mais tempo de tela (~20 s), cursor clicando, aparece primeiro o símbolo e gira com calma; entra perto
