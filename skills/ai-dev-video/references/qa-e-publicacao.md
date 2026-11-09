@@ -43,3 +43,4 @@
 - Nunca dois Shorts do **mesmo evento** em sequência; alterne por origem. Postar tudo de um evento junto é "péssimo pro engajamento".
 - Ritmo que ficou: 1 Short por dia.
 - Experimentos registrados (`docs/experimentos.md`): horário (07h, 12h, 18h, 21h; ≥ 5 por variante; medianas em 48 h e 7 d), depois CTA (60%, 30%, sem).
+- Leitura das métricas, atraso da API e régua certa por formato: `analytics.md`.

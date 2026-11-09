@@ -66,11 +66,15 @@ Abrir pela **tese** ("Se a igreja não estiver pautada em Cristo, todo o resto v
 Notas baixas / fora: exortação que soa como **bronca** fora de contexto; temas **políticos**; piadas que dependem do
 contexto; liturgia (ceia, louvor) — sem o culto em volta, não funcionam como corte.
 
+**Conteúdo passivo não tem gancho nativo — a seleção é a edição:** comece na frase forte; teste **cold open** (2–4 s da
+frase de impacto + flash + volta ao começo) e texto de gancho na tela. Ver `analytics.md`.
+
 Short pode servir de **isca** para o corte longo terminando antes da explicação completa (hipótese, ainda não medida).
 
 ## Títulos
 
-- Pesquisáveis, no padrão do canal (ex.: "Título | Texto | Orador"). "Se o que nos une é dorama, igreja não existe"
+- Pesquisáveis, no padrão do canal (ex.: "Título | Texto | Orador"), com a **busca principal literal no começo**,
+  validada no autocompletar e no `search.list` (ver `analytics.md`). Título serve à busca; capa e gancho servem ao feed. "Se o que nos une é dorama, igreja não existe"
   foi criticado: "Ele tá pesquisável?… Achei esquisito o título".
 - Sem clickbait enganoso; fiel à mensagem.
 - Palavras sensíveis (doença, morte): **fora do título, da capa e da primeira legenda**; o áudio não é mutado.
