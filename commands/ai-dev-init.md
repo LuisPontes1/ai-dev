@@ -57,6 +57,10 @@ for this stack; mention them in the report.
 Copy from `~/.claude/ai-dev/templates/handoff.md` — the live state (focus, next step, what awaits the user,
 active persona). Restored automatically at session start and after every compaction.
 
+**`.ai-dev/persona.md`** (optional — offer it when the work is perennial: a channel, a product, a recurring pipeline)
+Copy `~/.claude/ai-dev/templates/persona.md` (or a skill's ready base, e.g. `ai-dev-video/persona-editor.md`) and fill
+it with the user. It is injected in full in every session and after every compaction.
+
 **`.ai-dev/session-log.md`**
 Copy the session-log template. Write the first entry:
 `[current date HH:MM] .ai-dev/ initialized by /ai-dev-init.`

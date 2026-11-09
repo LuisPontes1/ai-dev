@@ -116,6 +116,7 @@ Knowledge is what the project knows. Session state is where the work **is**. Bot
 |------|------|------------|
 | `plan.md` + `tasks/` | what was agreed; each task's status, executor, persona | PM |
 | `session-log.md` | append-only history of PM actions (and of compactions) | PM, hooks |
+| `persona.md` (optional) | who the assistant **is** in this project: identity, non-negotiables, where the knowledge lives — injected in full at every start, resume, `/clear` and compaction; its non-negotiables go to every subagent | user + PM (template `templates/persona.md`) |
 | `handoff.md` → **Estado (PM)** | the present: modo, foco, fazendo, próximo passo, aguardando usuário, persona ativa, decisões, notas | PM via `aidev handoff set` |
 | `handoff.md` → **Snapshot automático** | plan + tasks/personas, session-log tail, git, protocols & skills loaded, the user's last messages verbatim | `PreCompact` hook / `aidev checkpoint` |
 | `handoff.md` → **Último resumo de compactação** | the summary Claude Code produced, plus what it dropped | `PostCompact` hook |

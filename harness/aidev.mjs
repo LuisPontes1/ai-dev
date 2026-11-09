@@ -16,7 +16,7 @@ import { appendEntry, tail } from "./lib/progress.mjs";
 import { checkMap, renderGenerated, scan } from "./lib/knowledge.mjs";
 import { aidevHome, brief, globalKnowledgeDir, learn, recall } from "./lib/memory.mjs";
 import {
-  HANDOFF_FIELDS, checkpoint, compactionInstructions, handoffPath, readHandoff, recordSummary, restoreBlock, setHandoff,
+  HANDOFF_FIELDS, checkpoint, compactionInstructions, handoffPath, projectPersona, readHandoff, recordSummary, restoreBlock, setHandoff,
 } from "./lib/session.mjs";
 
 const USAGE = `aidev — ai-dev long-running harness
@@ -300,11 +300,13 @@ function cmdBrief(rootArg, flags) {
   const max = Number(flags["max-chars"] || HOOK_BUDGET);
   let text;
   if (event === "SubagentStart") {
+    const pp = projectPersona(root);
     const head = [
       "## ai-dev — contexto para subagente",
       "Você é um subagente do ai-dev: siga o prompt/arquivo de task que recebeu, fique dentro dos outputs dele, escreva resultados em arquivos. Não aja como PM e não peça aprovações.",
       "Disciplina: ~/.claude/ai-dev/guidelines/karpathy-guidelines.md. Aprendeu algo? `node ~/.claude/ai-dev/harness/aidev.mjs learn gotcha|decision|note`.",
-    ].join("\n");
+      pp && `\n### Regras inegociáveis do projeto (${pp.name} — .ai-dev/persona.md)\n${(pp.rules || "Leia .ai-dev/persona.md antes de começar.").slice(0, 1500)}`,
+    ].filter(Boolean).join("\n");
     text = [head, brief(root, { maxChars: Math.min(max, 6000) - head.length, harnessStatus: h.status })].filter(Boolean).join("\n\n");
   } else {
     const session = restoreBlock(root, source === "manual" ? "startup" : source);

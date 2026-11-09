@@ -17,6 +17,7 @@ Referências (leia a que o momento pede):
 - `references/pipeline-tecnico.md` — transcrição, revisão, alinhamento, render (receitas ffmpeg), áudio, qualidade
 - `references/execucao-remota.md` — Colab pela CLI, regras de VM, pasta de fontes, Drive
 - `references/qa-e-publicacao.md` — gates G1–G6, folha de contato, prévias, YouTube (títulos, tags, capa, agenda, experimentos)
+- `persona-editor.md` — base pronta para a persona perene de um projeto de vídeo: copie para `.ai-dev/persona.md` do projeto
 - `references/caso-igreja-fonte.md` — as escolhas de identidade **deste** canal (cores, fontes, CTA, descrição) — exemplo, não regra geral
 
 ## O fluxo — com gates

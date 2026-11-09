@@ -175,3 +175,53 @@ describe("hooks via CLI", () => {
     }
   });
 });
+
+describe("project persona (.ai-dev/persona.md)", () => {
+  const PERSONA = path.join(REPO, "skills", "ai-dev-video", "persona-editor.md");
+  beforeEach(() => fs.copyFileSync(PERSONA, ai("persona.md")));
+
+  it("parses name and non-negotiables", async () => {
+    const { projectPersona } = await import("../lib/session.mjs");
+    const pp = projectPersona(root);
+    assert.equal(pp.name, "Editor de vídeo — Shorts e cortes");
+    assert.match(pp.rules, /G3a é minha obrigação/);
+    assert.doesNotMatch(pp.rules, /Onde está o conhecimento/);
+  });
+  it("is restored in full at startup and after compaction, before the handoff", () => {
+    setHandoff(root, { foco: "lote 08/11" });
+    for (const source of ["startup", "compact", "resume", "clear"]) {
+      const r = restoreBlock(root, source);
+      assert.match(r, /Persona do projeto — você trabalha como: Editor de vídeo/, source);
+      assert.match(r, /Nada vai ao ar sem o "ok" explícito/, source);
+      assert.ok(r.indexOf("Persona do projeto") < r.indexOf("### Handoff"), source);
+    }
+  });
+  it("is named in the compaction instructions and checked in the summary", () => {
+    assert.match(compactionInstructions(root, {}), /works as "Editor de vídeo — Shorts e cortes"/);
+    assert.ok(recordSummary(root, "ai-dev PM").missing.some((m) => m.startsWith("persona do projeto")));
+    assert.ok(!recordSummary(root, "ai-dev PM, working as the Editor de vídeo").missing.some((m) => m.startsWith("persona do projeto")));
+  });
+  it("project personas/<name>.md override the global one", async () => {
+    const { personaText } = await import("../lib/session.mjs");
+    fs.mkdirSync(ai("personas"));
+    fs.writeFileSync(ai("personas", "security.md"), "# Persona: security do projeto\n");
+    assert.match(personaText(root, "security"), /security do projeto/);
+    assert.match(personaText(root, "tdd") || "", /^$/);
+  });
+  it("subagents get the non-negotiables via SubagentStart", () => {
+    fs.writeFileSync(path.join(home, "enabled"), "");
+    const r = spawnSync(process.execPath, [CLI, "brief", "--hook"], {
+      input: JSON.stringify({ cwd: root, hook_event_name: "SubagentStart" }), encoding: "utf8", env: { ...process.env, AIDEV_HOME: home },
+    });
+    const ctx = JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
+    assert.match(ctx, /Regras inegociáveis do projeto \(Editor de vídeo/);
+    assert.match(ctx, /Uma execução por VM/);
+  });
+  it("whole session restore with persona stays under the hook cap", () => {
+    fs.writeFileSync(path.join(home, "enabled"), "");
+    const r = spawnSync(process.execPath, [CLI, "brief", "--hook"], {
+      input: JSON.stringify({ cwd: root, hook_event_name: "SessionStart", source: "compact" }), encoding: "utf8", env: { ...process.env, AIDEV_HOME: home },
+    });
+    assert.ok(JSON.parse(r.stdout).hookSpecificOutput.additionalContext.length <= 9500);
+  });
+});

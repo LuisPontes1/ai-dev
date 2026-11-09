@@ -220,6 +220,25 @@ function gitInfo(root) {
   }
 }
 
+// The project's perennial persona: .ai-dev/persona.md. Always active in that project —
+// it is who the assistant is there, restored at every start, resume, /clear and compaction.
+export const PROJECT_PERSONA_BUDGET = 3000;
+
+export function projectPersona(root) {
+  const file = path.join(root, ".ai-dev", "persona.md");
+  const text = read(file).replace(/<!--[\s\S]*?-->/g, "").trim();
+  if (!text) return null;
+  const name = ((text.match(/^#\s+(?:Persona:\s*)?(.+)$/m) || [])[1] || "persona do projeto").trim();
+  // "Inegociáveis" (or "Nunca") is what subagents also need to honour.
+  const rules = (text.match(/^##\s+(?:Inegoci[aá]veis|Regras inegoci[aá]veis|Nunca)[^\n]*\n([\s\S]*?)(?=^##\s|$(?![\s\S]))/m) || [])[1] || "";
+  return { name, text, rules: rules.trim(), file };
+}
+
+// Named persona: project's .ai-dev/personas/<name>.md wins over the global ~/.claude/ai-dev/personas/<name>.md.
+export function personaText(root, name) {
+  return read(path.join(root, ".ai-dev", "personas", `${name}.md`)) || read(path.join(aidevHome(), "personas", `${name}.md`));
+}
+
 export function activePersona(root) {
   const { state } = readHandoff(root);
   let name = empty(state.persona) ? "" : state.persona.replace(/[`*]/g, "").split(/[\s(—-]/)[0];
@@ -232,8 +251,7 @@ export function activePersona(root) {
     }
   }
   if (!name) return null;
-  const text = read(path.join(aidevHome(), "personas", `${name}.md`));
-  return { name, task, text };
+  return { name, task, text: personaText(root, name) };
 }
 
 export function checkpoint(root, { trigger = "manual", transcriptPath = null, now = new Date() } = {}) {
@@ -243,6 +261,7 @@ export function checkpoint(root, { trigger = "manual", transcriptPath = null, no
   const snap = [
     `- **Gerado:** ${stamp(now)} (${trigger})`,
     gitInfo(root) && `- **Git:** ${gitInfo(root)}`,
+    projectPersona(root) && `- **Persona do projeto:** ${projectPersona(root).name} (\`.ai-dev/persona.md\`)`,
     persona && `- **Persona ativa:** ${persona.name}${persona.task ? ` (${persona.task})` : ""}`,
     t.protocols.length && `- **Protocolos carregados (reler antes de agir):** ${t.protocols.map((p) => `\`${p}\``).join(", ")}`,
     t.skills.length && `- **Skills usadas:** ${t.skills.join(", ")}`,
@@ -288,7 +307,7 @@ export function compactionInstructions(root, { digest, persona } = {}) {
     "The summary MUST preserve, explicitly and near the top:",
     "1. ROLE: the assistant is the ai-dev PM — orchestrates, never executes tasks inline; context comes from .ai-dev/ files; nothing runs without plan approval and per-task user confirmation (except inside an approved /ai-dev-loop budget).",
     `2. FOCUS: the exact task/feature in progress and the step within it${!empty(state.foco) ? ` (handoff says: ${state.foco})` : ""}.`,
-    `3. PERSONA: the active specialist persona and for which task${persona ? ` (currently: ${persona.name}${persona.task ? ` on ${persona.task}` : ""})` : " (none active)"}.`,
+    `3. PERSONA: ${projectPersona(root) ? `in this project the assistant works as "${projectPersona(root).name}" (.ai-dev/persona.md) — say so explicitly; ` : ""}the active specialist persona and for which task${persona ? ` (currently: ${persona.name}${persona.task ? ` on ${persona.task}` : ""})` : " (none active)"}.`,
     "4. APPROVALS: what the user explicitly approved and what is still awaiting the user — never turn a pending question into an approval.",
     "5. USER'S WORDS: the user's latest instructions and preferences, quoted verbatim when short.",
     "6. DECISIONS made this session that are not yet written to .ai-dev/context.md, with their reasons.",
@@ -309,6 +328,7 @@ export function recordSummary(root, summary, { now = new Date() } = {}) {
     ["ai-dev / PM role", /ai-dev|\bPM\b|project manager/i],
     !empty(state.foco) && [`focus "${state.foco}"`, new RegExp(String(state.foco).split(/\s+/)[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")],
     persona && [`persona "${persona.name}"`, new RegExp(persona.name, "i")],
+    projectPersona(root) && [`persona do projeto "${projectPersona(root).name}"`, new RegExp(projectPersona(root).name.split(/\s+/)[0].replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i")],
   ].filter(Boolean);
   const missing = must.filter(([, re]) => !re.test(summary || "")).map(([label]) => label);
   const body = [
@@ -342,6 +362,12 @@ export function restoreBlock(root, source) {
       protocols ? `- **Releia antes de agir:** ${protocols}` : "",
       lost ? `- ⚠️ A compactação perdeu: ${lost} — confie neste bloco e no handoff, não no resumo.` : "",
     ].filter(Boolean).join("\n"));
+  }
+
+  const pp = projectPersona(root);
+  if (pp) {
+    const body = pp.text.length > PROJECT_PERSONA_BUDGET ? `${pp.text.slice(0, PROJECT_PERSONA_BUDGET)}\n… (continua em .ai-dev/persona.md — leia o arquivo inteiro)` : pp.text;
+    parts.push([`### 🧭 Persona do projeto — você trabalha como: ${pp.name}`, "(Fonte: `.ai-dev/persona.md`. Vale a sessão inteira, para toda tarefa deste projeto.)", "", body.replace(/^#\s+.*\n?/, "").trim()].join("\n"));
   }
 
   const estado = HANDOFF_FIELDS.filter(([k]) => !empty(state[k])).map(([k, label]) => `- **${label}:** ${state[k]}`);

@@ -174,6 +174,13 @@ One line per field; overwrite, don't append. The session-log is the history; the
 3. `SessionStart(compact)` → "⚙️ Restauração" block: your PM role, the active persona's full text, protocols to re-read,
    the handoff, the plan and the log — then the knowledge brief.
 
+**Project persona** — `.ai-dev/persona.md`, for perennial work (a channel, a product, a recurring pipeline):
+who you are in that project, its non-negotiable rules and where its knowledge lives. The hooks inject it **in full**
+at every start, resume, `/clear` and compaction, and give its "Inegociáveis" to every subagent. Keep it under
+~3,000 chars (identity and rules; techniques by pointer to skills/docs; state goes in `handoff.md`). When the user
+corrects a rule of the persona, update `persona.md` in the same turn. Template: `~/.claude/ai-dev/templates/persona.md`.
+Named personas in `.ai-dev/personas/<name>.md` override the global ones for that project.
+
 **After a compaction** (you see "⚙️ Restauração (compact)"): trust that block and `handoff.md` over the summary;
 re-read the protocols it lists; if a persona is active, keep applying it; never treat something listed under
 "Aguardando usuário" as approved. Log `[timestamp] Resumed after compaction — focus: …`.

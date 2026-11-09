@@ -184,6 +184,7 @@ Each project gets this (created by `/ai-dev-init`, gitignored):
 ├── plan.md               # Plan + approval gate + changelog
 ├── session-log.md        # Append-only PM action log (audit trail)
 ├── handoff.md            # Live state: focus, next step, awaiting user, active persona (+ compaction snapshots)
+├── persona.md            # Optional perennial persona of the project — injected in full every session
 ├── tasks/
 │   ├── _template.md      # Task template with atomicity checklist
 │   └── task-001.md       # One file per task — subagent's only instruction
